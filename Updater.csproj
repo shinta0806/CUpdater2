@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -10,7 +10,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\_Common\LogWriter.cs" Link="_Common\LogWriter.cs" />
+    <Compile Include="..\..\_Common\ShintaCommon.cs" Link="_Common\ShintaCommon.cs" />
+    <Compile Include="..\..\_Common\SimpleTraceListener.cs" Link="_Common\SimpleTraceListener.cs" />
+    <Compile Include="..\..\_Common\WindowsApi.cs" Link="_Common\WindowsApi.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="LivetCask" Version="3.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="_Common\" />
   </ItemGroup>
 
 </Project>

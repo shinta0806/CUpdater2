@@ -1,23 +1,56 @@
-﻿using Livet;
-using Livet.Commands;
-using Livet.EventListeners;
-using Livet.Messaging;
-using Livet.Messaging.IO;
-using Livet.Messaging.Windows;
+﻿// ============================================================================
+// 
+// メインウィンドウの ViewModel
+// 
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// 
+// ----------------------------------------------------------------------------
+
+using Shinta;
+
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using Updater.Models;
+using System.Diagnostics;
+
+using Updater.Models.SharedMisc;
+using Updater.Models.UpdaterModels;
 
 namespace Updater.ViewModels
 {
-	public class MainWindowViewModel : ViewModel
+	public class MainWindowViewModel : UpdViewModel
 	{
-		// Some useful code snippets for ViewModel are defined as l*(llcom, llcomn, lvcomm, lsprop, etc...).
-		public void Initialize()
+		// ====================================================================
+		// コンストラクター・デストラクター
+		// ====================================================================
+
+		// --------------------------------------------------------------------
+		// コンストラクター
+		// --------------------------------------------------------------------
+		public MainWindowViewModel()
 		{
+		}
+
+		// --------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------
+		public override void Initialize()
+		{
+			base.Initialize();
+
+			try
+			{
+				// タイトルバー
+				Title = UpdConstants.APP_NAME_J;
+#if DEBUG
+				Title = "［デバッグ］" + Title;
+#endif
+			}
+			catch (Exception excep)
+			{
+				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(TraceEventType.Error, "メインウィンドウ初期化時エラー：\n" + excep.Message);
+				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
+			}
 		}
 	}
 }
