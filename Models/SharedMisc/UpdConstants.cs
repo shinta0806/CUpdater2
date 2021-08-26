@@ -25,5 +25,12 @@ namespace Updater.Models.SharedMisc
 		public const String APP_NAME_J = "ちょちょいと自動更新 2";
 		public const String APP_VER = "Ver 0.01 α";
 		public const String COPYRIGHT_J = "Copyright (C) 2021 by SHINTA";
+
+		// --------------------------------------------------------------------
+		// MessageKey
+		// --------------------------------------------------------------------
+
+		// ウィンドウを閉じる
+		public const String MESSAGE_KEY_WINDOW_CLOSE = "Close";
 	}
 }

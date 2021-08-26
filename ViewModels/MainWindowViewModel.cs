@@ -11,8 +11,9 @@
 using Shinta;
 
 using System;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
-
+using System.Threading;
 using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
 
@@ -31,6 +32,17 @@ namespace Updater.ViewModels
 		{
 		}
 
+		// ====================================================================
+		// public プロパティー
+		// ====================================================================
+
+		// --------------------------------------------------------------------
+		// View 通信用のプロパティー
+		// --------------------------------------------------------------------
+
+		// ログ
+		public ObservableCollection<String> Logs { get; set; } = new();
+
 		// --------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------
@@ -38,6 +50,7 @@ namespace Updater.ViewModels
 		{
 			base.Initialize();
 
+			Boolean showErrMsg = _params.ForceShow;
 			try
 			{
 				// タイトルバー
@@ -45,11 +58,84 @@ namespace Updater.ViewModels
 #if DEBUG
 				Title = "［デバッグ］" + Title;
 #endif
+
+				// ログ表示
+				UpdaterModel.Instance.EnvModel.LogWriter.AppendDisplayText = AppendDisplayText;
+
+				// コマンドライン引数
+				AnalyzeParams();
+
+				// 呼びだし元アプリが背面に行くのを防止できるように配慮
+				if (_params.NotifyHWnd != IntPtr.Zero)
+				{
+					WindowsApi.PostMessage(_params.NotifyHWnd, UpdaterLauncher.WM_UPDATER_LAUNCHED, IntPtr.Zero, IntPtr.Zero);
+				}
+
+				if (!_params.IsRequiredValid())
+				{
+					// ユーザーが間違って起動した可能性が高いので、ユーザーにメッセージを表示する
+					showErrMsg = true;
+					throw new Exception("動作に必要なパラメーターが設定されていません。");
+				}
+
+				// オンリー系の動作（動作後に終了）
+				if (_params.DeleteOld)
+				{
+					// 未実装
+					throw new Exception("パラメーターが不正です。");
+				}
+				else if (_params.Verbose)
+				{
+					UpdCommon.NotifyDisplayedIfNeeded(_params);
+#if false
+					using (FormAbout aAbout = new FormAbout(mLogWriter))
+					{
+						aAbout.ShowDialog();
+					}
+#endif
+					throw new OperationCanceledException();
+				}
+
+				// セルフ再起動
+				// .NET Core アプリから起動された場合、自身が呼びだし元のファイルをロックしている状態になっていることがある
+				// セルフ再起動することにより、呼び出し元と自身のアプリの関連性が切れ、ロックが解除されるようだ
+				if (!_params.SelfLaunch)
+				{
+					// 何らかのバグにより再起動を繰り返す事態になった場合に利用者がプロセスを殺す余地ができるように少し待機
+					Thread.Sleep(1000);
+
+					_params.SelfLaunch = true;
+					_params.Launch(_params.ForceShow);
+
+					showErrMsg = false;
+					throw new OperationCanceledException("セルフ再起動したため終了します。");
+				}
+
+				// 同じパスでの多重起動防止
+				// セルフ再起動しないことが確定してから確認する必要があるため App.xaml.cs では実施せずにここで実施する
+				_mutex = CommonWindows.ActivateAnotherProcessWindowIfNeeded(Common.SHINTA + '_' + UpdConstants.APP_ID + '_' + UpdaterModel.Instance.EnvModel.ExeFullPath.Replace('\\', '/'));
+				if (_mutex == null)
+				{
+					throw new MultiInstanceException();
+				}
+
+				// オンリー系ではないので先に進む
+
+				// 正常終了時はウィンドウを閉じない（スレッドに閉じてもらう）
 			}
 			catch (Exception excep)
 			{
-				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(TraceEventType.Error, "メインウィンドウ初期化時エラー：\n" + excep.Message);
-				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
+				if (showErrMsg && !String.IsNullOrEmpty(excep.Message))
+				{
+					UpdCommon.NotifyDisplayedIfNeeded(_params);
+					UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(TraceEventType.Error, excep.Message);
+				}
+				else
+				{
+					UpdaterModel.Instance.EnvModel.LogWriter.LogMessage(TraceEventType.Error, "メインウィンドウ初期化時エラー：\n" + excep.Message);
+					UpdaterModel.Instance.EnvModel.LogWriter.LogMessage(Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
+				}
+				CloseWindow();
 			}
 		}
 
@@ -100,7 +186,130 @@ namespace Updater.ViewModels
 		// private メンバー変数
 		// ====================================================================
 
+		// 本来 UpdaterLauncher は起動用だが、ここでは引数管理用として使用
+		private UpdaterLauncher _params = new UpdaterLauncher();
+
+		// 多重起動防止用
+		// アプリケーション終了までガベージコレクションされないようにメンバー変数で持つ
+		private Mutex? _mutex;
+
 		// Dispose フラグ
 		private Boolean _isDisposed;
+
+		// ====================================================================
+		// private メンバー関数
+		// ====================================================================
+
+		// --------------------------------------------------------------------
+		// コマンドライン引数の解析
+		// --------------------------------------------------------------------
+		private void AnalyzeParams()
+		{
+			String[] cmdParams = Environment.GetCommandLineArgs();
+			String cmdParam;
+			String opt;
+			Int32 optInt32;
+
+			for (Int32 i = 1; i < cmdParams.Length; i++)
+			{
+				// 本当は、パラメーターによってはインデックスをさらに 1 つ進める必要があるが、面倒くさいので進めない
+				cmdParam = cmdParams[i];
+				if (i == cmdParams.Length - 1)
+				{
+					opt = String.Empty;
+				}
+				else
+				{
+					opt = cmdParams[i + 1];
+				}
+
+				// 共通オプション
+				if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_ID, true) == 0)
+				{
+					_params.ID = opt;
+				}
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_NAME, true) == 0)
+				{
+					_params.Name = opt;
+				}
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_WAIT, true) == 0)
+				{
+					if (Int32.TryParse(opt, out optInt32))
+					{
+						_params.Wait = optInt32;
+					}
+				}
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_FORCE_SHOW, true) == 0)
+				{
+					_params.ForceShow = true;
+				}
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_NOTIFY_HWND, true) == 0)
+				{
+					if (Int32.TryParse(opt, out optInt32))
+					{
+						_params.NotifyHWnd = (IntPtr)optInt32;
+					}
+				}
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_SELF_LAUNCH, true) == 0)
+				{
+					_params.SelfLaunch = true;
+				}
+
+				// 共通オプション（オンリー系）
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_VERBOSE, true) == 0)
+				{
+					_params.Verbose = true;
+				}
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_DELETE_OLD, true) == 0)
+				{
+					_params.DeleteOld = true;
+				}
+
+				// 最新情報確認用オプション
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_LATEST_RSS, true) == 0)
+				{
+					_params.LatestRss = opt;
+				}
+
+				// 更新（自動アップデート）用オプション
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_UPDATE_RSS, true) == 0)
+				{
+					_params.UpdateRss = opt;
+				}
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_CURRENT_VER, true) == 0)
+				{
+					_params.CurrentVer = opt;
+				}
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_PID, true) == 0)
+				{
+					if (Int32.TryParse(opt, out optInt32))
+					{
+						_params.PID = optInt32;
+					}
+				}
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_RELAUNCH, true) == 0)
+				{
+					_params.Relaunch = opt;
+				}
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_CLEAR_UPDATE_CACHE, true) == 0)
+				{
+					_params.ClearUpdateCache = true;
+				}
+				else if (String.Compare(cmdParam, UpdaterLauncher.PARAM_STR_FORCE_INSTALL, true) == 0)
+				{
+					_params.ForceInstall = true;
+				}
+			}
+
+			UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(TraceEventType.Verbose, "AnalyzeParams() ID: " + _params.ID);
+		}
+
+		// --------------------------------------------------------------------
+		// ログ文字列に追加
+		// --------------------------------------------------------------------
+		private void AppendDisplayText(String text)
+		{
+			Logs.Add(text);
+		}
 	}
 }

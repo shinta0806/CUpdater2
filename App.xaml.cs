@@ -14,10 +14,8 @@ using Shinta;
 
 using System;
 using System.Diagnostics;
-using System.Threading;
 using System.Windows;
 
-using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
 
 namespace Updater
@@ -30,7 +28,7 @@ namespace Updater
 
 		// 多重起動防止用
 		// アプリケーション終了までガベージコレクションされないようにメンバー変数で持つ
-		private Mutex? _mutex;
+		//private Mutex? _mutex;
 
 		// ====================================================================
 		// private メンバー関数
@@ -47,12 +45,14 @@ namespace Updater
 			// 集約エラーハンドラー設定
 			AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
+#if false
 			// 多重起動チェック
 			_mutex = CommonWindows.ActivateAnotherProcessWindowIfNeeded(Common.SHINTA + '_' + UpdConstants.APP_ID + '_' + UpdaterModel.Instance.EnvModel.ExeFullPath.Replace('\\', '/'));
 			if (_mutex == null)
 			{
 				throw new MultiInstanceException();
 			}
+#endif
 		}
 
 		// --------------------------------------------------------------------
@@ -69,7 +69,8 @@ namespace Updater
 				if (unhandledExceptionEventArgs.ExceptionObject is Exception excep)
 				{
 					// UpdaterModel 未生成の可能性があるためまずはメッセージ表示のみ
-					MessageBox.Show("不明なエラーが発生しました。アプリケーションを終了します。\n" + excep.Message + "\n" + excep.InnerException?.Message + "\n" + excep.StackTrace,
+					MessageBox.Show("不明なエラーが発生しました。アプリケーションを終了します。\n" + excep.Message + "\n" 
+							+ excep.InnerException?.GetType().Name + "\n" + excep.InnerException?.Message + "\n" + excep.StackTrace,
 							"エラー", MessageBoxButton.OK, MessageBoxImage.Error);
 
 					try

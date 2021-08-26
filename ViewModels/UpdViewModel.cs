@@ -9,11 +9,13 @@
 // ----------------------------------------------------------------------------
 
 using Livet;
+using Livet.Messaging.Windows;
 
 using Shinta;
 
 using System;
 
+using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
 
 namespace Updater.ViewModels
@@ -69,6 +71,14 @@ namespace Updater.ViewModels
 		// ====================================================================
 		// protected メンバー関数
 		// ====================================================================
+
+		// --------------------------------------------------------------------
+		// ウィンドウを閉じる
+		// --------------------------------------------------------------------
+		protected void CloseWindow()
+		{
+			Messenger.Raise(new WindowActionMessage(UpdConstants.MESSAGE_KEY_WINDOW_CLOSE));
+		}
 
 		// --------------------------------------------------------------------
 		// リソース解放
