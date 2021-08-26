@@ -2,8 +2,11 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>net5.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <Authors>SHINTA</Authors>
+    <Copyright>Copyright © by SHINTA</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
