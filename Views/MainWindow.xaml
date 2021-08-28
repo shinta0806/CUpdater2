@@ -8,7 +8,7 @@
     xmlns:vm="clr-namespace:Updater.ViewModels"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="{Binding Title}" Width="635" Height="300" 
-    WindowStyle="None" AllowsTransparency="True" Opacity="0.75" >
+    WindowStyle="None" AllowsTransparency="True" Opacity="{Binding Opacity}" >
 
     <Window.DataContext>
         <vm:MainWindowViewModel />

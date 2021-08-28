@@ -8,12 +8,19 @@
 // 
 // ----------------------------------------------------------------------------
 
+using MaterialDesignColors;
+using MaterialDesignThemes.Wpf;
+
 using Shinta;
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+
 using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
 
@@ -40,24 +47,35 @@ namespace Updater.ViewModels
 		// View 通信用のプロパティー
 		// --------------------------------------------------------------------
 
+		// 不透明度
+		private Double _opacity = 0.75;
+		public Double Opacity
+		{
+			get => _opacity;
+			set => RaisePropertyChangedIfSet(ref _opacity, value);
+		}
+
 		// ログ
 		public ObservableCollection<String> Logs { get; set; } = new();
 
 		// --------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------
-		public override void Initialize()
+		public override async void Initialize()
 		{
 			base.Initialize();
 
 			Boolean showErrMsg = _params.ForceShow;
 			try
 			{
-				// タイトルバー
+				// タイトルバー（ユーザーには見えないが識別に使われるかもしれないので一応設定しておく）
 				Title = UpdConstants.APP_NAME_J;
 #if DEBUG
 				Title = "［デバッグ］" + Title;
 #endif
+
+				// 外観
+				SetAppearance();
 
 				// ログ表示
 				UpdaterModel.Instance.EnvModel.LogWriter.AppendDisplayText = AppendDisplayText;
@@ -96,6 +114,7 @@ namespace Updater.ViewModels
 					throw new OperationCanceledException();
 				}
 
+#if false
 				// セルフ再起動
 				// .NET Core アプリから起動された場合、自身が呼びだし元のファイルをロックしている状態になっていることがある
 				// セルフ再起動することにより、呼び出し元と自身のアプリの関連性が切れ、ロックが解除されるようだ
@@ -110,6 +129,7 @@ namespace Updater.ViewModels
 					showErrMsg = false;
 					throw new OperationCanceledException("セルフ再起動したため終了します。");
 				}
+#endif
 
 				// 同じパスでの多重起動防止
 				// セルフ再起動しないことが確定してから確認する必要があるため App.xaml.cs では実施せずにここで実施する
@@ -120,8 +140,10 @@ namespace Updater.ViewModels
 				}
 
 				// オンリー系ではないので先に進む
+				await Task.Run(() => UpdateSequence());
 
 				// 正常終了時はウィンドウを閉じない（スレッドに閉じてもらう）
+				Debug.WriteLine("Initialize() done");
 			}
 			catch (Exception excep)
 			{
@@ -177,8 +199,8 @@ namespace Updater.ViewModels
 			}
 			catch (Exception excep)
 			{
-				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(TraceEventType.Error, "メインウィンドウ破棄時エラー：\n" + excep.Message);
-				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
+				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(TraceEventType.Error, "メインウィンドウ破棄時エラー：\n" + excep.Message, !_params.ForceShow);
+				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace, !_params.ForceShow);
 			}
 		}
 
@@ -310,6 +332,52 @@ namespace Updater.ViewModels
 		private void AppendDisplayText(String text)
 		{
 			Logs.Add(text);
+		}
+
+		// --------------------------------------------------------------------
+		// マテリアルデザインの外観を設定
+		// --------------------------------------------------------------------
+		private void SetAppearance()
+		{
+			IEnumerable<Swatch> swatches = new SwatchesProvider().Swatches;
+			PaletteHelper paletteHelper = new();
+			ITheme theme = paletteHelper.GetTheme();
+			Swatch? orangeSwatch = swatches.FirstOrDefault(x => x.Name == "orange");
+			if (orangeSwatch != null)
+			{
+				theme.SetPrimaryColor(orangeSwatch.ExemplarHue.Color);
+			}
+			Swatch? limeSwatch = swatches.FirstOrDefault(x => x.Name == "yellow");
+			if (limeSwatch != null)
+			{
+				theme.SetSecondaryColor(limeSwatch.ExemplarHue.Color);
+			}
+			paletteHelper.SetTheme(theme);
+		}
+
+		// --------------------------------------------------------------------
+		// ウィンドウを可視化する
+		// --------------------------------------------------------------------
+		private void ShowWindow()
+		{
+			Opacity = 1.0;
+		}
+
+		// --------------------------------------------------------------------
+		// 一連の更新確認作業（実質メイン処理）
+		// --------------------------------------------------------------------
+		private void UpdateSequence()
+		{
+			try
+			{
+				Thread.Sleep(5000);
+				ShowWindow();
+			}
+			catch (Exception excep)
+			{
+				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(TraceEventType.Error, "更新確認時エラー：\n" + excep.Message, !_params.ForceShow);
+				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace, !_params.ForceShow);
+			}
 		}
 	}
 }
