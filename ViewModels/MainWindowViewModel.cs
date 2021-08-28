@@ -19,8 +19,8 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 
+using Updater.Models;
 using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
 
@@ -140,13 +140,13 @@ namespace Updater.ViewModels
 				}
 
 				// オンリー系ではないので先に進む
-				await Task.Run(() => UpdateSequence());
-
-				// 正常終了時はウィンドウを閉じない（スレッドに閉じてもらう）
+				UpdateSequence updateSequence = new(_params);
+				await updateSequence.RunAsync();
 				Debug.WriteLine("Initialize() done");
 			}
 			catch (Exception excep)
 			{
+				// 条件が独自のため ShowLogMessageAndNotify() は使わない
 				if (showErrMsg && !String.IsNullOrEmpty(excep.Message))
 				{
 					UpdCommon.NotifyDisplayedIfNeeded(_params);
@@ -157,8 +157,10 @@ namespace Updater.ViewModels
 					UpdaterModel.Instance.EnvModel.LogWriter.LogMessage(TraceEventType.Error, "メインウィンドウ初期化時エラー：\n" + excep.Message);
 					UpdaterModel.Instance.EnvModel.LogWriter.LogMessage(Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
 				}
-				CloseWindow();
 			}
+
+			// ウィンドウを閉じる
+			CloseWindow();
 		}
 
 		// ====================================================================
@@ -192,15 +194,15 @@ namespace Updater.ViewModels
 				{
 				}
 
-				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(Common.TRACE_EVENT_TYPE_STATUS, "終了しました：" + UpdConstants.APP_NAME_J + " "
-						+ UpdConstants.APP_VER + " --------------------");
+				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS,
+						"終了しました：" + UpdConstants.APP_NAME_J + " " + UpdConstants.APP_VER + " --------------------");
 
 				_isDisposed = true;
 			}
 			catch (Exception excep)
 			{
-				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(TraceEventType.Error, "メインウィンドウ破棄時エラー：\n" + excep.Message, !_params.ForceShow);
-				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace, !_params.ForceShow);
+				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Error, "メインウィンドウ破棄時エラー：\n" + excep.Message);
+				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
 			}
 		}
 
@@ -323,7 +325,7 @@ namespace Updater.ViewModels
 				}
 			}
 
-			UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(TraceEventType.Verbose, "AnalyzeParams() ID: " + _params.ID);
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "AnalyzeParams() ID: " + _params.ID);
 		}
 
 		// --------------------------------------------------------------------
@@ -361,23 +363,6 @@ namespace Updater.ViewModels
 		private void ShowWindow()
 		{
 			Opacity = 1.0;
-		}
-
-		// --------------------------------------------------------------------
-		// 一連の更新確認作業（実質メイン処理）
-		// --------------------------------------------------------------------
-		private void UpdateSequence()
-		{
-			try
-			{
-				Thread.Sleep(5000);
-				ShowWindow();
-			}
-			catch (Exception excep)
-			{
-				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(TraceEventType.Error, "更新確認時エラー：\n" + excep.Message, !_params.ForceShow);
-				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace, !_params.ForceShow);
-			}
 		}
 	}
 }

@@ -15,7 +15,7 @@ namespace Updater.Models.UpdaterModels
 	public class UpdaterModel : NotificationObject
 	{
 		// ====================================================================
-		// static public プロパティー
+		// static プロパティー
 		// ====================================================================
 
 		// 唯一のインスタンス

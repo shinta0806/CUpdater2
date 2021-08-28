@@ -17,7 +17,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 
-using Updater.Models.SerializableSettings;
 using Updater.Models.SharedMisc;
 
 namespace Updater.Models.UpdaterModels
