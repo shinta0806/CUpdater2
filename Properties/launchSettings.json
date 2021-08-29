@@ -2,7 +2,7 @@
   "profiles": {
     "Updater": {
       "commandName": "Project",
-      "commandLineArgs": "/ID test /Name テストアプリ /Wait 3 /LatestRSS http://shinta.coresv.com/soft/Test_JPN.xml"
+      "commandLineArgs": "/ID test /Name テストアプリ /Wait 1 /LatestRSS http://shinta.coresv.com/soft/Test_JPN.xml /ForceShow"
     }
   }
 }

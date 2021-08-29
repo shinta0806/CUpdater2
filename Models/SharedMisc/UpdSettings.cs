@@ -12,6 +12,7 @@ using Shinta;
 
 using System;
 using System.Windows;
+
 using Updater.Models.UpdaterModels;
 
 namespace Updater.Models.SharedMisc

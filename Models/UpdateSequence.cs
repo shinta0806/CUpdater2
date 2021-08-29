@@ -11,9 +11,13 @@
 using Shinta;
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+
 using Updater.Models.SharedMisc;
+using Updater.Models.UpdaterModels;
 
 namespace Updater.Models
 {
@@ -47,6 +51,18 @@ namespace Updater.Models
 		}
 
 		// ====================================================================
+		// private メンバー定数
+		// ====================================================================
+
+		// 初代ちょちょいと自動更新と設定ファイルがかぶらないようにするためのプレフィックス
+		private const String CONFIG_FILE_NAME_PREFIX = "Upd2_";
+
+		// 設定保存ファイルのサフィックス
+		private const String CONFIG_FILE_NAME_DUMMY_SUFFIX = "_Dummy";
+		private const String CONFIG_FILE_NAME_LATEST_SUFFIX = "_Latest";
+		private const String CONFIG_FILE_NAME_UPDATE_SUFFIX = "_Update";
+
+		// ====================================================================
 		// private メンバー変数
 		// ====================================================================
 
@@ -55,6 +71,9 @@ namespace Updater.Models
 
 		// 表示名
 		private String _displayName;
+
+		// 最新情報
+		private List<RssItem> _newItems = new();
 
 		// ====================================================================
 		// private メンバー関数
@@ -93,32 +112,29 @@ namespace Updater.Models
 		// --------------------------------------------------------------------
 		private void PrepareLatest()
 		{
-#if false
-			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Information, _displayName + "の最新情報を確認中...");
+			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, _displayName + "の最新情報を確認中...");
 
 			// RSS チェック
-			RssManager aRssManager = new RssManager();
-			SetRssManager(aRssManager, FILE_NAME_LATEST_SUFFIX);
-			mLogWriter.ShowLogMessage(TraceEventType.Verbose, "PrepareLatest() location: " + mParams.LatestRss);
-			String aErr;
-			if (!aRssManager.ReadLatestRss(mParams.LatestRss, out aErr))
+			RssManager rssManager = new(UpdaterModel.Instance.EnvModel.LogWriter);
+			SetRssManager(rssManager, CONFIG_FILE_NAME_LATEST_SUFFIX);
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "PrepareLatest() location: " + _params.LatestRss);
+			(Boolean result, String? errorMessage) = rssManager.ReadLatestRss(_params.LatestRss);
+			if (!result)
 			{
-				throw new Exception(aErr);
+				throw new Exception(errorMessage);
 			}
-			aRssManager.GetNewItems(out mNewItems);
+			_newItems = rssManager.GetNewItems();
 
 			// 更新
-			aRssManager.UpdatePastRss();
-			aRssManager.Save();
+			rssManager.UpdatePastRss();
+			rssManager.Save();
 
 			// 分析
-			if (mNewItems.Count == 0)
+			if (_newItems.Count == 0)
 			{
 				throw new Exception("最新情報はありませんでした。");
 			}
-			LogAndSendAndShowMessage(TraceEventType.Information, mDisplayName + "の最新情報が "
-					+ mNewItems.Count.ToString() + " 件見つかりました。", false);
-#endif
+			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, _displayName + "の最新情報が " + _newItems.Count.ToString() + " 件見つかりました。");
 		}
 
 		// --------------------------------------------------------------------
@@ -130,48 +146,73 @@ namespace Updater.Models
 			{
 				Boolean latestResult = false;
 				Boolean updateResult = false;
-				String latestErr = String.Empty;
-				String updateErr = String.Empty;
+				String latestErrorMessage = String.Empty;
+				String updateErrorMessage = String.Empty;
 
 				// 待機
 				if (_params.Wait > 0)
 				{
-					UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Information, _params.Wait.ToString() + " 秒待機します...");
+					UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, _params.Wait.ToString() + " 秒待機します...");
 					await Task.Delay(_params.Wait * 1000);
 				}
 
-#if false
 				// 最新情報確認
 				if (_params.IsLatestMode())
 				{
-					latestResult = CheckLatestInfo(out latestErr);
+					(latestResult, latestErrorMessage) = CheckLatestInfo();
 				}
 
+#if false
 				// 自動更新
 				if (_params.IsUpdateMode())
 				{
-					updateResult = CheckUpdate(out updateErr);
+					updateResult = CheckUpdate(out updateErrorMessage);
 				}
+#endif
 
 				if (!latestResult && !updateResult)
 				{
 					// 片方でも正常に終了していればそこでメッセージが表示される
 					// どちらも正常に終了していない場合のみメッセージを表示する
-					LogAndSendAndShowMessage(TraceEventType.Error, latestErr + "\n\n" + updateErr, true);
-					aTotalResult = false;
+					UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Error, latestErrorMessage + "\n\n" + updateErrorMessage);
 				}
-#endif
 			}
 			catch (Exception excep)
 			{
-				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Error, "更新確認時エラー：\n" + excep.Message);
+				// CheckXXXX() が例外をハンドルするため、ここには到達しない想定
+				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Error, "更新確認時の予期しないエラー：\n" + excep.Message);
 				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
 			}
 			finally
 			{
 				UpdCommon.NotifyDisplayedIfNeeded(_params);
 			}
+		}
 
+		// --------------------------------------------------------------------
+		// RSS マネージャーの設定を行う
+		// --------------------------------------------------------------------
+		private void SetRssManager(RssManager rssManager, String configFileSuffix)
+		{
+			// 既存設定の読込
+			rssManager.SavePath = Common.UserAppDataFolderPath() + CONFIG_FILE_NAME_PREFIX + _params.ID + configFileSuffix + Common.FILE_EXT_CONFIG;
+			rssManager.Load();
+
+			// スレッド制御
+			rssManager.CancellationToken = UpdaterModel.Instance.EnvModel.AppCancellationTokenSource.Token;
+
+			// UA
+			rssManager.UserAgent += " " + UpdConstants.APP_ID + "/" + Regex.Replace(UpdConstants.APP_VER, @"[^0-9\.]", "");
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "UA: " + rssManager.UserAgent);
+
+#if DEBUG
+			String guids = "SetRssManager() PastRssGuids:\n";
+			foreach (String guid in rssManager.PastRssGuids)
+			{
+				guids += guid + "\n";
+			}
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, guids);
+#endif
 		}
 
 	}
