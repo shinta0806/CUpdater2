@@ -82,14 +82,14 @@ namespace Updater.Models
 		// --------------------------------------------------------------------
 		// 最新情報の確認
 		// --------------------------------------------------------------------
-		private (Boolean result, String errorMessage) CheckLatestInfo()
+		private async Task<(Boolean result, String errorMessage)> CheckLatestInfoAsync()
 		{
 			Boolean result = false;
 			String errorMessage = String.Empty;
 
 			try
 			{
-				PrepareLatest();
+				await PrepareLatestAsync();
 #if false
 				AskDisplayLatest();
 				DisplayLatest();
@@ -98,9 +98,10 @@ namespace Updater.Models
 
 				// 最新情報を正しく表示できたら、それがメッセージ代わりなので、別途のメッセージ表示はしない
 			}
-			catch (Exception oExcep)
+			catch (Exception excep)
 			{
-				errorMessage = "【最新情報の確認】\n" + oExcep.Message;
+				errorMessage = "【最新情報の確認】\n" + excep.Message;
+				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
 			}
 
 			return (result, errorMessage);
@@ -110,7 +111,7 @@ namespace Updater.Models
 		// 最新情報の確認と表示準備
 		// ＜例外＞ Exception
 		// --------------------------------------------------------------------
-		private void PrepareLatest()
+		private async Task PrepareLatestAsync()
 		{
 			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, _displayName + "の最新情報を確認中...");
 
@@ -118,7 +119,7 @@ namespace Updater.Models
 			RssManager rssManager = new(UpdaterModel.Instance.EnvModel.LogWriter);
 			SetRssManager(rssManager, CONFIG_FILE_NAME_LATEST_SUFFIX);
 			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "PrepareLatest() location: " + _params.LatestRss);
-			(Boolean result, String? errorMessage) = rssManager.ReadLatestRss(_params.LatestRss);
+			(Boolean result, String? errorMessage) = await rssManager.ReadLatestRssAsync(_params.LatestRss);
 			if (!result)
 			{
 				throw new Exception(errorMessage);
@@ -159,7 +160,7 @@ namespace Updater.Models
 				// 最新情報確認
 				if (_params.IsLatestMode())
 				{
-					(latestResult, latestErrorMessage) = CheckLatestInfo();
+					(latestResult, latestErrorMessage) = await CheckLatestInfoAsync();
 				}
 
 #if false
