@@ -15,7 +15,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
+using System.Windows;
 using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
 
@@ -81,6 +81,20 @@ namespace Updater.Models
 
 		// --------------------------------------------------------------------
 		// 最新情報の確認
+		// ＜例外＞ Exception
+		// --------------------------------------------------------------------
+		private void AskDisplayLatest()
+		{
+			UpdCommon.NotifyDisplayedIfNeeded(_params);
+			if (MessageBox.Show(_displayName + "の最新情報が " + _newItems.Count.ToString() + " 件見つかりました。\n表示しますか？",
+					"質問", MessageBoxButton.YesNo, MessageBoxImage.Exclamation) != MessageBoxResult.Yes)
+			{
+				throw new Exception("最新情報の表示を中止しました。");
+			}
+		}
+
+		// --------------------------------------------------------------------
+		// 最新情報の確認
 		// --------------------------------------------------------------------
 		private async Task<(Boolean result, String errorMessage)> CheckLatestInfoAsync()
 		{
@@ -90,10 +104,8 @@ namespace Updater.Models
 			try
 			{
 				await PrepareLatestAsync();
-#if false
 				AskDisplayLatest();
 				DisplayLatest();
-#endif
 				result = true;
 
 				// 最新情報を正しく表示できたら、それがメッセージ代わりなので、別途のメッセージ表示はしない
@@ -108,6 +120,69 @@ namespace Updater.Models
 		}
 
 		// --------------------------------------------------------------------
+		// RSS マネージャーを生成
+		// --------------------------------------------------------------------
+		private RssManager CreateRssManager(String configFileSuffix)
+		{
+			RssManager rssManager = new(UpdaterModel.Instance.EnvModel.LogWriter, Common.UserAppDataFolderPath() + CONFIG_FILE_NAME_PREFIX + _params.ID + configFileSuffix + Common.FILE_EXT_CONFIG);
+
+			// 既存設定の読込
+			rssManager.Load();
+
+			// スレッド制御
+			rssManager.CancellationToken = UpdaterModel.Instance.EnvModel.AppCancellationTokenSource.Token;
+
+			// UA
+			rssManager.UserAgent += " " + UpdConstants.APP_ID + "/" + Regex.Replace(UpdConstants.APP_VER, @"[^0-9\.]", "");
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "UA: " + rssManager.UserAgent);
+
+#if DEBUG
+			String guids = "SetRssManager() PastRssGuids:\n";
+			foreach (String guid in rssManager.PastRssGuids)
+			{
+				guids += guid + "\n";
+			}
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, guids);
+#endif
+
+			return rssManager;
+		}
+		// --------------------------------------------------------------------
+		// 最新情報の確認
+		// ＜例外＞ Exception
+		// --------------------------------------------------------------------
+		private void DisplayLatest()
+		{
+			Int32 numErrors = 0;
+
+			foreach (RssItem newItem in _newItems)
+			{
+				try
+				{
+					UpdCommon.ShellExecute(newItem.Elements[RssManager.NODE_NAME_LINK]);
+				}
+				catch
+				{
+					// エラーでもとりあえずは続行
+					numErrors++;
+				}
+			}
+			if (numErrors == 0)
+			{
+				// 正常終了
+				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, _newItems.Count.ToString() + " 件の最新情報を表示完了。");
+			}
+			else if (numErrors < _newItems.Count)
+			{
+				throw new Exception("一部の最新情報を表示できませんでした。");
+			}
+			else
+			{
+				throw new Exception("最新情報を表示できませんでした。");
+			}
+		}
+
+		// --------------------------------------------------------------------
 		// 最新情報の確認と表示準備
 		// ＜例外＞ Exception
 		// --------------------------------------------------------------------
@@ -116,8 +191,7 @@ namespace Updater.Models
 			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, _displayName + "の最新情報を確認中...");
 
 			// RSS チェック
-			RssManager rssManager = new(UpdaterModel.Instance.EnvModel.LogWriter);
-			SetRssManager(rssManager, CONFIG_FILE_NAME_LATEST_SUFFIX);
+			RssManager rssManager = CreateRssManager(CONFIG_FILE_NAME_LATEST_SUFFIX);
 			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "PrepareLatest() location: " + _params.LatestRss);
 			(Boolean result, String? errorMessage) = await rssManager.ReadLatestRssAsync(_params.LatestRss);
 			if (!result)
@@ -190,31 +264,6 @@ namespace Updater.Models
 			}
 		}
 
-		// --------------------------------------------------------------------
-		// RSS マネージャーの設定を行う
-		// --------------------------------------------------------------------
-		private void SetRssManager(RssManager rssManager, String configFileSuffix)
-		{
-			// 既存設定の読込
-			rssManager.SavePath = Common.UserAppDataFolderPath() + CONFIG_FILE_NAME_PREFIX + _params.ID + configFileSuffix + Common.FILE_EXT_CONFIG;
-			rssManager.Load();
-
-			// スレッド制御
-			rssManager.CancellationToken = UpdaterModel.Instance.EnvModel.AppCancellationTokenSource.Token;
-
-			// UA
-			rssManager.UserAgent += " " + UpdConstants.APP_ID + "/" + Regex.Replace(UpdConstants.APP_VER, @"[^0-9\.]", "");
-			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "UA: " + rssManager.UserAgent);
-
-#if DEBUG
-			String guids = "SetRssManager() PastRssGuids:\n";
-			foreach (String guid in rssManager.PastRssGuids)
-			{
-				guids += guid + "\n";
-			}
-			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, guids);
-#endif
-		}
 
 	}
 }
