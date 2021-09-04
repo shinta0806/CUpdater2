@@ -13,9 +13,12 @@ using Shinta;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+
 using Updater.Models.Settings;
 using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
@@ -63,6 +66,12 @@ namespace Updater.Models
 		private const String CONFIG_FILE_NAME_LATEST_SUFFIX = "_Latest";
 		private const String CONFIG_FILE_NAME_UPDATE_SUFFIX = "_Update";
 
+		// ファイル名
+		private const String FILE_NAME_DOWNLOAD_ZIP = "Download.zip";
+
+		// 自動更新用ファイルをダウンロードする回数（プログラムや RSS の不具合で永遠にダウンロードするのを防ぐ）
+		private const Int32 DOWNLOAD_TRY_MAX = 5;
+
 		// ====================================================================
 		// private メンバー変数
 		// ====================================================================
@@ -85,6 +94,14 @@ namespace Updater.Models
 		// ====================================================================
 		// private メンバー関数
 		// ====================================================================
+
+		// --------------------------------------------------------------------
+		// ユーザーエージェントの追加部分
+		// --------------------------------------------------------------------
+		private String AdditionalUserAgent()
+		{
+			return " " + UpdConstants.APP_ID + "/" + Regex.Replace(UpdConstants.APP_VER, @"[^0-9\.]", "");
+		}
 
 		// --------------------------------------------------------------------
 		// 最新情報の確認
@@ -171,7 +188,7 @@ namespace Updater.Models
 		// --------------------------------------------------------------------
 		// 自動更新の確認
 		// --------------------------------------------------------------------
-		private async Task<(Boolean result, String errorMessage)> CheckUpdate()
+		private async Task<(Boolean result, String errorMessage)> CheckUpdateAsync()
 		{
 			Boolean result = false;
 			String errorMessage = String.Empty;
@@ -179,7 +196,7 @@ namespace Updater.Models
 			try
 			{
 				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "CheckUpdate() relaunch path: " + _params.Relaunch);
-				await PrepareUpdate();
+				await PrepareUpdateAsync();
 
 #if false
 				if (mParams.ForceInstall)
@@ -256,7 +273,7 @@ namespace Updater.Models
 			rssManager.CancellationToken = UpdaterModel.Instance.EnvModel.AppCancellationTokenSource.Token;
 
 			// UA
-			rssManager.UserAgent += " " + UpdConstants.APP_ID + "/" + Regex.Replace(UpdConstants.APP_VER, @"[^0-9\.]", "");
+			rssManager.UserAgent += AdditionalUserAgent();
 			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "UA: " + rssManager.UserAgent);
 
 #if DEBUG
@@ -306,6 +323,75 @@ namespace Updater.Models
 		}
 
 		// --------------------------------------------------------------------
+		// 更新版をダウンロード
+		// ＜例外＞ Exception
+		// --------------------------------------------------------------------
+		private async Task DownloadUpdateArchiveAsync()
+		{
+			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "更新版をダウンロードします。");
+
+			// 試行回数チェック
+			if (_autoUpdateSettings.DownloadVer == _updateItems[0].Elements[RssManager.NODE_NAME_TITLE]
+				&& _autoUpdateSettings.DownloadTry >= DOWNLOAD_TRY_MAX
+				&& !_params.ForceInstall)
+			{
+				throw new Exception("ダウンロード回数超過のため自動更新を中止しました。");
+			}
+
+			// 試行情報更新
+			if (_autoUpdateSettings.DownloadVer == _updateItems[0].Elements[RssManager.NODE_NAME_TITLE])
+			{
+				_autoUpdateSettings.DownloadTry++;
+			}
+			else
+			{
+				_autoUpdateSettings.DownloadVer = _updateItems[0].Elements[RssManager.NODE_NAME_TITLE];
+				_autoUpdateSettings.DownloadTry = 1;
+			}
+			_autoUpdateSettings.DownloadMD5 = _updateItems[0].Elements[RssManager.NODE_NAME_LINK + RssItem.RSS_ITEM_NAME_DELIMITER + RssManager.ATTRIBUTE_NAME_MD5];
+			_autoUpdateSettings.Save();
+
+			// ミラー選択
+			Int32 mirrorIndex = new Random().Next(_updateItems.Count);
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "DownloadUpdate() mirror index: " + mirrorIndex.ToString());
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "DownloadUpdate() URL: " + _updateItems[mirrorIndex].Elements[RssManager.NODE_NAME_LINK]);
+
+			// ダウンロード
+			Downloader downloader = new();
+			downloader.CancellationToken = UpdaterModel.Instance.EnvModel.AppCancellationTokenSource.Token;
+			downloader.UserAgent += AdditionalUserAgent();
+			await downloader.DownloadAsFileAsync(_updateItems[mirrorIndex].Elements[RssManager.NODE_NAME_LINK], UpdateArchivePath());
+			if (!IsUpdateArchiveMD5Valid())
+			{
+				throw new Exception("正常にダウンロードが完了しませんでした（内容にエラーがあります）。");
+			}
+			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "更新版のダウンロードが完了しました。");
+		}
+
+		// --------------------------------------------------------------------
+		// ダウンロード完了している自動更新用アーカイブの MD5 は有効か
+		// --------------------------------------------------------------------
+		private Boolean IsUpdateArchiveMD5Valid()
+		{
+			// MD5 ハッシュ値の取得
+			using FileStream fileStream = new FileStream(UpdateArchivePath(), FileMode.Open, FileAccess.Read, FileShare.Read);
+			using MD5CryptoServiceProvider md5Provider = new();
+			Byte[] hashBytes = md5Provider.ComputeHash(fileStream);
+
+			// ハッシュ値を文字列に変換
+			String hashStr = BitConverter.ToString(hashBytes).Replace("-", String.Empty);
+
+			// 確認
+			if (String.Compare(_autoUpdateSettings.DownloadMD5, hashStr, true) != 0)
+			{
+				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "IsUpdateArchiveMD5Valid() アーカイブ情報の MD5 が異なる: _autoUpdateSettings.DownloadMD5: "
+						+ _autoUpdateSettings.DownloadMD5 + ", アーカイブ MD5: " + hashStr);
+				return false;
+			}
+			return true;
+		}
+
+		// --------------------------------------------------------------------
 		// 最新情報の確認と表示準備
 		// ＜例外＞ Exception
 		// --------------------------------------------------------------------
@@ -339,7 +425,7 @@ namespace Updater.Models
 		// 更新版の確認とインストール準備
 		// ＜例外＞ Exception
 		// --------------------------------------------------------------------
-		private async Task PrepareUpdate()
+		private async Task PrepareUpdateAsync()
 		{
 			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, _displayName + "の更新版を確認中...");
 			Common.InitializeTempFolder();
@@ -379,13 +465,8 @@ namespace Updater.Models
 			AnalyzeUpdateRss();
 			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Information, "新しいバージョン「" + _updateItems[0].Elements[RssManager.NODE_NAME_TITLE] + "」が見つかりました。");
 
-#if false
 			// ダウンロード
-			if (!IsUpdateDownloaded())
-			{
-				DownloadUpdateArchive();
-			}
-#endif
+			await DownloadUpdateArchiveAsync();
 		}
 
 		// --------------------------------------------------------------------
@@ -416,7 +497,7 @@ namespace Updater.Models
 				// 自動更新
 				if (_params.IsUpdateMode())
 				{
-					(updateResult, updateErrorMessage) = await CheckUpdate();
+					(updateResult, updateErrorMessage) = await CheckUpdateAsync();
 				}
 
 				if (!latestResult && !updateResult)
@@ -436,6 +517,14 @@ namespace Updater.Models
 			{
 				UpdCommon.NotifyDisplayedIfNeeded(_params);
 			}
+		}
+
+		// --------------------------------------------------------------------
+		// ダウンロードした自動更新用アーカイブを保存するパス
+		// --------------------------------------------------------------------
+		private String UpdateArchivePath()
+		{
+			return Common.TempFolderPath() + FILE_NAME_DOWNLOAD_ZIP;
 		}
 	}
 }
