@@ -15,7 +15,7 @@ using System.Windows;
 
 using Updater.Models.UpdaterModels;
 
-namespace Updater.Models.SharedMisc
+namespace Updater.Models.Settings
 {
 	public class UpdSettings : SerializableSettings
 	{
@@ -27,7 +27,7 @@ namespace Updater.Models.SharedMisc
 		// コンストラクター
 		// --------------------------------------------------------------------
 		public UpdSettings()
-				: base(null /* UpdaterModel.Instance がまだ生成されていないので LogWriter を設定できない */)
+				: base(null /* UpdaterModel.Instance がまだ生成されていないので LogWriter を設定できない */, null)
 		{
 		}
 

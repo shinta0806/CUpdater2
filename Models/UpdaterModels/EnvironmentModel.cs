@@ -17,6 +17,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 
+using Updater.Models.Settings;
 using Updater.Models.SharedMisc;
 
 namespace Updater.Models.UpdaterModels

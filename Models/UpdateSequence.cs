@@ -16,6 +16,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using Updater.Models.Settings;
 using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
 
@@ -75,9 +76,57 @@ namespace Updater.Models
 		// 最新情報
 		private List<RssItem> _newItems = new();
 
+		// 更新情報
+		private List<RssItem> _updateItems = new();
+
+		// 更新制御情報
+		private AutoUpdateSettings _autoUpdateSettings = new();
+
 		// ====================================================================
 		// private メンバー関数
 		// ====================================================================
+
+		// --------------------------------------------------------------------
+		// 最新情報の確認
+		// --------------------------------------------------------------------
+		private void AnalyzeUpdateRss()
+		{
+			// アップデートファイル情報のバージョンを揃える（不揃いのを切り捨てる）
+			Int32 index = 1;
+			while (index < _updateItems.Count)
+			{
+				if (_updateItems[index].Elements[RssManager.NODE_NAME_TITLE] != _updateItems[0].Elements[RssManager.NODE_NAME_TITLE])
+				{
+					_updateItems.RemoveAt(index);
+					UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "AnalyzeRSS() バージョン不揃い: " + index.ToString());
+				}
+				else
+				{
+					index++;
+				}
+			}
+
+			// 更新が必要かどうかの判定
+			// 強制インストールの場合は常に必要判定
+			if (_params.ForceInstall)
+			{
+				return;
+			}
+
+			// RSS に記載のバージョンが現在のバージョン以下なら不要
+			if (StringUtils.StrAndNumCmp(_updateItems[0].Elements[RssManager.NODE_NAME_TITLE], _params.CurrentVer, true) <= 0)
+			{
+				throw new Exception("更新の必要はありません：更新版がありません（現行：" + _params.CurrentVer
+						+ "、最新版：" + _updateItems[0].Elements[RssManager.NODE_NAME_TITLE] + "）");
+			}
+
+			// RSS に記載のバージョンが SkipVer 以下なら不要
+			if (StringUtils.StrAndNumCmp(_updateItems[0].Elements[RssManager.NODE_NAME_TITLE], _autoUpdateSettings.SkipVer, true) <= 0)
+			{
+				throw new Exception("更新の必要はありません：ユーザーに不要と指定されたバージョンです（現行："
+						+ _params.CurrentVer + "、不要版：" + _autoUpdateSettings.SkipVer + "）");
+			}
+		}
 
 		// --------------------------------------------------------------------
 		// 最新情報の確認
@@ -116,6 +165,80 @@ namespace Updater.Models
 				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
 			}
 
+			return (result, errorMessage);
+		}
+
+		// --------------------------------------------------------------------
+		// 自動更新の確認
+		// --------------------------------------------------------------------
+		private async Task<(Boolean result, String errorMessage)> CheckUpdate()
+		{
+			Boolean result = false;
+			String errorMessage = String.Empty;
+
+			try
+			{
+				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "CheckUpdate() relaunch path: " + _params.Relaunch);
+				await PrepareUpdate();
+
+#if false
+				if (mParams.ForceInstall)
+				{
+					ShowInstallMessage();
+				}
+				else
+				{
+					AskUpdate();
+				}
+				mParams.ForceShow = true;
+				IntPtr aOldMainFormHandle = MainFormHandle;
+				PostCommand(UpdaterCommand.ShowMainFormRequested);
+
+				// ShowMainFormRequested により MainFormHandle が更新されるはずなので、それを待つ
+				for (Int32 i = 0; i < WAIT_MAIN_FORM_HANDLE_CHANGE_MAX; i++)
+				{
+					if (MainFormHandle != aOldMainFormHandle)
+					{
+						mLogWriter.ShowLogMessage(TraceEventType.Verbose, "CheckUpdate() #" + i.ToString() + " で脱出");
+						break;
+					}
+					Thread.Sleep(Common.GENERAL_SLEEP_TIME);
+				}
+
+				WaitTargetExit();
+				InstallUpdate();
+
+				String aOKMessage = String.Empty;
+				aOKMessage = "更新版のインストールが完了しました。";
+				if (!String.IsNullOrEmpty(mParams.Relaunch))
+				{
+					aOKMessage += "\n" + mDisplayName + "を再起動します。";
+				}
+				LogAndSendAndShowMessage(TraceEventType.Information, aOKMessage, true);
+				result = true;
+#endif
+			}
+			catch (Exception oExcep)
+			{
+				errorMessage = "【更新版の確認】\n" + oExcep.Message;
+			}
+
+#if false
+			// 再起動
+			if (result && !String.IsNullOrEmpty(mParams.Relaunch))
+			{
+				try
+				{
+					Process.Start(mParams.Relaunch);
+				}
+				catch
+				{
+					LogAndSendAndShowMessage(TraceEventType.Error, mDisplayName + "を再起動できませんでした。", true);
+					errorMessage = mDisplayName + "を再起動できませんでした。";
+					result = false;
+				}
+			}
+#endif
 			return (result, errorMessage);
 		}
 
@@ -213,6 +336,59 @@ namespace Updater.Models
 		}
 
 		// --------------------------------------------------------------------
+		// 更新版の確認とインストール準備
+		// ＜例外＞ Exception
+		// --------------------------------------------------------------------
+		private async Task PrepareUpdate()
+		{
+			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, _displayName + "の更新版を確認中...");
+			Common.InitializeTempFolder();
+
+			// 更新制御情報
+			_autoUpdateSettings = new(UpdaterModel.Instance.EnvModel.LogWriter,
+					Common.UserAppDataFolderPath() + CONFIG_FILE_NAME_PREFIX + _params.ID + CONFIG_FILE_NAME_UPDATE_SUFFIX + Common.FILE_EXT_CONFIG);
+			if (_params.ClearUpdateCache)
+			{
+				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "更新制御情報をクリアします。");
+
+				// 空の情報で保存
+				_autoUpdateSettings.Save();
+			}
+			else
+			{
+				_autoUpdateSettings.Load();
+			}
+
+			// RSS チェック
+			RssManager rssManager = CreateRssManager(CONFIG_FILE_NAME_DUMMY_SUFFIX);
+			(Boolean result, String? errorMessage) = await rssManager.ReadLatestRssAsync(_params.UpdateRss);
+			if (!result)
+			{
+				throw new Exception(errorMessage);
+			}
+
+			// 全件取得
+			_updateItems = rssManager.GetNewItems();
+			rssManager.GetAllItems();
+
+			// 分析
+			if (_updateItems.Count == 0)
+			{
+				throw new Exception("自動更新用 RSS に情報がありません。");
+			}
+			AnalyzeUpdateRss();
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Information, "新しいバージョン「" + _updateItems[0].Elements[RssManager.NODE_NAME_TITLE] + "」が見つかりました。");
+
+#if false
+			// ダウンロード
+			if (!IsUpdateDownloaded())
+			{
+				DownloadUpdateArchive();
+			}
+#endif
+		}
+
+		// --------------------------------------------------------------------
 		// 一連の更新確認を実施
 		// --------------------------------------------------------------------
 		private async Task RunCoreAsync()
@@ -237,13 +413,11 @@ namespace Updater.Models
 					(latestResult, latestErrorMessage) = await CheckLatestInfoAsync();
 				}
 
-#if false
 				// 自動更新
 				if (_params.IsUpdateMode())
 				{
-					updateResult = CheckUpdate(out updateErrorMessage);
+					(updateResult, updateErrorMessage) = await CheckUpdate();
 				}
-#endif
 
 				if (!latestResult && !updateResult)
 				{
@@ -263,7 +437,5 @@ namespace Updater.Models
 				UpdCommon.NotifyDisplayedIfNeeded(_params);
 			}
 		}
-
-
 	}
 }

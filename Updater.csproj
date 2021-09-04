@@ -17,6 +17,7 @@
     <Compile Include="..\..\_Common\ShintaCommon.cs" Link="_Common\ShintaCommon.cs" />
     <Compile Include="..\..\_Common\ShintaCommonWindows.cs" Link="_Common\ShintaCommonWindows.cs" />
     <Compile Include="..\..\_Common\SimpleTraceListener.cs" Link="_Common\SimpleTraceListener.cs" />
+    <Compile Include="..\..\_Common\StringUtils.cs" Link="_Common\StringUtils.cs" />
     <Compile Include="..\..\_Common\SystemEnvironment.cs" Link="_Common\SystemEnvironment.cs" />
     <Compile Include="..\..\_Common\UpdaterLauncher.cs" Link="_Common\UpdaterLauncher.cs" />
     <Compile Include="..\..\_Common\WindowsApi.cs" Link="_Common\WindowsApi.cs" />
