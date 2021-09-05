@@ -160,6 +160,35 @@ namespace Updater.Models
 		}
 
 		// --------------------------------------------------------------------
+		// 更新するかユーザーに尋ねる
+		// ＜例外＞ Exception
+		// --------------------------------------------------------------------
+		private void AskUpdate()
+		{
+			UpdCommon.NotifyDisplayedIfNeeded(_params);
+#if false
+			using (FormAskUpdate aAsk = new FormAskUpdate())
+			{
+				aAsk.Params = mParams;
+				aAsk.DisplayName = mDisplayName;
+				aAsk.NewVer = mUpdateItems[0].Elements[RssManager.NODE_NAME_TITLE];
+				switch (aAsk.ShowDialog())
+				{
+					case DialogResult.Yes:
+						ShowInstallMessage();
+						break;
+					case DialogResult.No:
+						mAutoUpdateStates.SkipVer = mUpdateItems[0].Elements[RssManager.NODE_NAME_TITLE];
+						mAutoUpdateStates.Save();
+						throw new Exception("更新版（" + mUpdateItems[0].Elements[RssManager.NODE_NAME_TITLE] + "）はインストールしません。");
+					default:
+						throw new Exception("更新版（" + mUpdateItems[0].Elements[RssManager.NODE_NAME_TITLE] + "）は後でインストールします。");
+				}
+			}
+#endif
+		}
+
+		// --------------------------------------------------------------------
 		// 最新情報の確認
 		// --------------------------------------------------------------------
 		private async Task<(Boolean result, String errorMessage)> CheckLatestInfoAsync()
@@ -198,8 +227,7 @@ namespace Updater.Models
 				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "CheckUpdate() relaunch path: " + _params.Relaunch);
 				await PrepareUpdateAsync();
 
-#if false
-				if (mParams.ForceInstall)
+				if (_params.ForceInstall)
 				{
 					ShowInstallMessage();
 				}
@@ -207,6 +235,7 @@ namespace Updater.Models
 				{
 					AskUpdate();
 				}
+#if false
 				mParams.ForceShow = true;
 				IntPtr aOldMainFormHandle = MainFormHandle;
 				PostCommand(UpdaterCommand.ShowMainFormRequested);
@@ -517,6 +546,15 @@ namespace Updater.Models
 			{
 				UpdCommon.NotifyDisplayedIfNeeded(_params);
 			}
+		}
+
+		// --------------------------------------------------------------------
+		// インストールを開始する旨のメッセージを表示
+		// --------------------------------------------------------------------
+		private void ShowInstallMessage()
+		{
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Information, _displayName + "の更新版をインストールします。\n"
+					+ _displayName + "が起動している場合は終了してから、OK ボタンをクリックして下さい。");
 		}
 
 		// --------------------------------------------------------------------
