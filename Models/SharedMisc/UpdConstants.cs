@@ -32,5 +32,8 @@ namespace Updater.Models.SharedMisc
 
 		// ウィンドウを閉じる
 		public const String MESSAGE_KEY_WINDOW_CLOSE = "Close";
+
+		// 更新適用可否確認ウィンドウを開く
+		public const String MESSAGE_KEY_OPEN_ASK_UPDATE_WINDOW = "OpenAskUpdateWindow";
 	}
 }

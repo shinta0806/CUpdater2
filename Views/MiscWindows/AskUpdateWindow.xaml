@@ -1,0 +1,41 @@
+﻿<Window x:Class="Updater.Views.MiscWindows.AskUpdateWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:l="http://schemas.livet-mvvm.net/2011/wpf"
+        xmlns:msm="clr-namespace:Updater.Models.SharedMisc"
+        xmlns:v="clr-namespace:Updater.Views"
+        xmlns:vm="clr-namespace:Updater.ViewModels"
+        xmlns:vmmwvm="clr-namespace:Updater.ViewModels.MiscWindowViewModels"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{Binding Title}" SizeToContent="WidthAndHeight" ResizeMode="NoResize" >
+
+    <Window.DataContext>
+        <vmmwvm:AskUpdateWindowViewModel />
+    </Window.DataContext>
+
+    <behaviors:Interaction.Triggers>
+        <!-- When ContentRendered event raised, Initialize method of ViewModel would be called. -->
+        <behaviors:EventTrigger EventName="ContentRendered">
+            <l:LivetCallMethodAction MethodTarget="{Binding}" MethodName="Initialize" />
+        </behaviors:EventTrigger>
+
+        <!-- Dispose method is called, when Window closing. -->
+        <behaviors:EventTrigger EventName="Closed">
+            <l:DataContextDisposeAction />
+        </behaviors:EventTrigger>
+
+        <!-- If you make user choose 'OK or Cancel' closing Window, then please use Window Close cancel Behavior. -->
+
+        <l:InteractionMessageTrigger MessageKey="{x:Static msm:UpdConstants.MESSAGE_KEY_WINDOW_CLOSE}" Messenger="{Binding Messenger}">
+            <l:WindowInteractionMessageAction InvokeActionOnlyWhenWindowIsActive="False" />
+        </l:InteractionMessageTrigger>
+
+    </behaviors:Interaction.Triggers>
+
+    <StackPanel Margin="20,20,20,20">
+        <Label Content="{Binding AskMessage}" MinWidth="400" Height="80" />
+        <Button Content="はい。今すぐ更新します。(_Y)" Command="{Binding ButtonYesClickedCommand}" />
+        <Button Content="いいえ。このバージョンはインストールしたくありません。(_N)" Style="{StaticResource MaterialDesignRaisedLightButton}" Margin="0,10,0,0" />
+        <Button Content="保留。後日、再度確認して下さい。(_L)" Style="{StaticResource MaterialDesignRaisedLightButton}" Margin="0,30,0,0" />
+    </StackPanel>
+</Window>

@@ -8,6 +8,7 @@
 // 
 // ----------------------------------------------------------------------------
 
+using Livet.Messaging;
 using Shinta;
 
 using System;
@@ -22,6 +23,8 @@ using System.Windows;
 using Updater.Models.Settings;
 using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
+using Updater.ViewModels;
+using Updater.ViewModels.MiscWindowViewModels;
 
 namespace Updater.Models
 {
@@ -34,8 +37,9 @@ namespace Updater.Models
 		// --------------------------------------------------------------------
 		// コンストラクター
 		// --------------------------------------------------------------------
-		public UpdateSequence(UpdaterLauncher launchParams)
+		public UpdateSequence(UpdViewModel mainWindowViewModel, UpdaterLauncher launchParams)
 		{
+			_mainWindowViewModel = mainWindowViewModel;
 			_params = launchParams;
 
 			// 表示名の設定
@@ -75,6 +79,9 @@ namespace Updater.Models
 		// ====================================================================
 		// private メンバー変数
 		// ====================================================================
+
+		// メインウィンドウのビューモデル
+		private UpdViewModel _mainWindowViewModel;
 
 		// 本来 UpdaterLauncher は起動用だが、ここでは引数管理用として使用
 		private UpdaterLauncher _params;
@@ -166,6 +173,17 @@ namespace Updater.Models
 		private void AskUpdate()
 		{
 			UpdCommon.NotifyDisplayedIfNeeded(_params);
+
+			// ViewModel 経由でウィンドウを開く
+			using AskUpdateWindowViewModel askUpdateWindowViewModel = new();
+			_mainWindowViewModel.Messenger.Raise(new TransitionMessage(askUpdateWindowViewModel, UpdConstants.MESSAGE_KEY_OPEN_ASK_UPDATE_WINDOW));
+
+			if (askUpdateWindowViewModel.IsOk)
+			{
+				ShowInstallMessage();
+			}
+
+
 #if false
 			using (FormAskUpdate aAsk = new FormAskUpdate())
 			{
@@ -483,8 +501,7 @@ namespace Updater.Models
 			}
 
 			// 全件取得
-			_updateItems = rssManager.GetNewItems();
-			rssManager.GetAllItems();
+			_updateItems = rssManager.GetAllItems();
 
 			// 分析
 			if (_updateItems.Count == 0)
@@ -492,7 +509,7 @@ namespace Updater.Models
 				throw new Exception("自動更新用 RSS に情報がありません。");
 			}
 			AnalyzeUpdateRss();
-			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Information, "新しいバージョン「" + _updateItems[0].Elements[RssManager.NODE_NAME_TITLE] + "」が見つかりました。");
+			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "新しいバージョン「" + _updateItems[0].Elements[RssManager.NODE_NAME_TITLE] + "」が見つかりました。");
 
 			// ダウンロード
 			await DownloadUpdateArchiveAsync();

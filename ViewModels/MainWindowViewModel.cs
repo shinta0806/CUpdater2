@@ -58,6 +58,10 @@ namespace Updater.ViewModels
 		// ログ
 		public ObservableCollection<String> Logs { get; set; } = new();
 
+		// ====================================================================
+		// public メンバー関数
+		// ====================================================================
+
 		// --------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------
@@ -140,7 +144,7 @@ namespace Updater.ViewModels
 				}
 
 				// オンリー系ではないので先に進む
-				UpdateSequence updateSequence = new(_params);
+				UpdateSequence updateSequence = new(this, _params);
 				await updateSequence.RunAsync();
 				Debug.WriteLine("Initialize() done");
 			}
