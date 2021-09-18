@@ -37,7 +37,7 @@ namespace Updater.Models
 		// --------------------------------------------------------------------
 		// コンストラクター
 		// --------------------------------------------------------------------
-		public UpdateSequence(UpdViewModel mainWindowViewModel, UpdaterLauncher launchParams)
+		public UpdateSequence(MainWindowViewModel mainWindowViewModel, UpdaterLauncher launchParams)
 		{
 			_mainWindowViewModel = mainWindowViewModel;
 			_params = launchParams;
@@ -81,7 +81,7 @@ namespace Updater.Models
 		// ====================================================================
 
 		// メインウィンドウのビューモデル
-		private UpdViewModel _mainWindowViewModel;
+		private MainWindowViewModel _mainWindowViewModel;
 
 		// 本来 UpdaterLauncher は起動用だが、ここでは引数管理用として使用
 		private UpdaterLauncher _params;
@@ -250,6 +250,16 @@ namespace Updater.Models
 					isUpdate = AskUpdate();
 				}
 				isMessageShown = true;
+
+				if (isUpdate)
+				{
+					_params.ForceShow = true;
+					_mainWindowViewModel.ShowWindow();
+
+					WaitTargetExit();
+					//InstallUpdate();
+				}
+
 #if false
 				mParams.ForceShow = true;
 				IntPtr aOldMainFormHandle = MainFormHandle;
@@ -576,6 +586,36 @@ namespace Updater.Models
 		private String UpdateArchivePath()
 		{
 			return Common.TempFolderPath() + FILE_NAME_DOWNLOAD_ZIP;
+		}
+
+		// --------------------------------------------------------------------
+		// 更新版のアーカイブをダウンロードしたフルパス
+		// --------------------------------------------------------------------
+		private void WaitTargetExit()
+		{
+
+			if (_params.PID == 0)
+			{
+				// 更新対象アプリが起動していることを知らされていない
+				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "WaitTargetExit() PID が 0 なので待機しない");
+				return;
+			}
+			_mainWindowViewModel.ShowWaitingMessage();
+
+			// プロセスの終了を待機
+			Process targetProcess;
+			try
+			{
+				targetProcess = Process.GetProcessById(_params.PID);
+			}
+			catch
+			{
+				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "終了検知ができません。終了を待たずに続行します。");
+				return;
+			}
+			targetProcess.WaitForExit();
+			targetProcess.Dispose();
+			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "終了を検知しました。続行します。");
 		}
 	}
 }

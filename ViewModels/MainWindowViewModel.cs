@@ -55,6 +55,22 @@ namespace Updater.ViewModels
 			set => RaisePropertyChangedIfSet(ref _opacity, value);
 		}
 
+		// メインキャプション
+		private String _caption = String.Empty;
+		public String Caption
+		{
+			get => _caption;
+			set => RaisePropertyChangedIfSet(ref _caption, value);
+		}
+
+		// サブキャプション
+		private String _subCaption = String.Empty;
+		public String SubCaption
+		{
+			get => _subCaption;
+			set => RaisePropertyChangedIfSet(ref _subCaption, value);
+		}
+
 		// ログ
 		public ObservableCollection<String> Logs { get; set; } = new();
 
@@ -165,6 +181,24 @@ namespace Updater.ViewModels
 
 			// ウィンドウを閉じる
 			CloseWindow();
+		}
+
+		// --------------------------------------------------------------------
+		// 更新対象アプリ終了待ち
+		// --------------------------------------------------------------------
+		public void ShowWaitingMessage()
+		{
+			SetCaption("アプリケーションの終了を待っています...");
+			SetSubCaption("アプリケーションを終了させて下さい。終了後、自動的に更新が開始されます。");
+			//TextBoxLog.AppendText("［" + mLogWriter.TraceEventTypeToCaption(TraceEventType.Information) + "］アプリケーションの終了を待っています...\r\n");
+		}
+
+		// --------------------------------------------------------------------
+		// ウィンドウを可視化する
+		// --------------------------------------------------------------------
+		public void ShowWindow()
+		{
+			Opacity = 1.0;
 		}
 
 		// ====================================================================
@@ -362,11 +396,20 @@ namespace Updater.ViewModels
 		}
 
 		// --------------------------------------------------------------------
-		// ウィンドウを可視化する
+		// メインキャプションとログ
 		// --------------------------------------------------------------------
-		private void ShowWindow()
+		private void SetCaption(String text)
 		{
-			Opacity = 1.0;
+			Caption = text;
+			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, text);
+		}
+
+		// --------------------------------------------------------------------
+		// サブキャプション
+		// --------------------------------------------------------------------
+		private void SetSubCaption(String text)
+		{
+			SubCaption = text;
 		}
 	}
 }
