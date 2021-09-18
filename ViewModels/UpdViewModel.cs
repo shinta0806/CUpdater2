@@ -14,6 +14,7 @@ using Livet.Messaging.Windows;
 using Shinta;
 
 using System;
+using System.Windows;
 
 using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
@@ -54,7 +55,7 @@ namespace Updater.ViewModels
 		// --------------------------------------------------------------------
 
 		// OK ボタン・削除ボタン等、キャンセル以外のボタンが押されて閉じられた
-		public Boolean IsOk { get; protected set; }
+		public MessageBoxResult ViewModelResult { get; protected set; }
 
 		// ====================================================================
 		// public メンバー関数

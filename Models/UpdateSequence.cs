@@ -168,50 +168,44 @@ namespace Updater.Models
 
 		// --------------------------------------------------------------------
 		// 更新するかユーザーに尋ねる
+		// ＜返値＞ 更新するかどうか
 		// ＜例外＞ Exception
 		// --------------------------------------------------------------------
-		private void AskUpdate()
+		private Boolean AskUpdate()
 		{
+			Boolean isUpdate = false;
+
 			UpdCommon.NotifyDisplayedIfNeeded(_params);
 
 			// ViewModel 経由でウィンドウを開く
 			using AskUpdateWindowViewModel askUpdateWindowViewModel = new();
 			_mainWindowViewModel.Messenger.Raise(new TransitionMessage(askUpdateWindowViewModel, UpdConstants.MESSAGE_KEY_OPEN_ASK_UPDATE_WINDOW));
 
-			if (askUpdateWindowViewModel.IsOk)
+			switch (askUpdateWindowViewModel.ViewModelResult)
 			{
-				ShowInstallMessage();
+				case MessageBoxResult.Yes:
+					isUpdate = true;
+					ShowInstallMessage();
+					break;
+				case MessageBoxResult.No:
+					_autoUpdateSettings.SkipVer = _updateItems[0].Elements[RssManager.NODE_NAME_TITLE];
+					_autoUpdateSettings.Save();
+					UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "更新版（" + _updateItems[0].Elements[RssManager.NODE_NAME_TITLE] + "）はインストールしません。");
+					break;
+				default:
+					UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "更新版（" + _updateItems[0].Elements[RssManager.NODE_NAME_TITLE] + "）は後でインストールします。");
+					break;
 			}
 
-
-#if false
-			using (FormAskUpdate aAsk = new FormAskUpdate())
-			{
-				aAsk.Params = mParams;
-				aAsk.DisplayName = mDisplayName;
-				aAsk.NewVer = mUpdateItems[0].Elements[RssManager.NODE_NAME_TITLE];
-				switch (aAsk.ShowDialog())
-				{
-					case DialogResult.Yes:
-						ShowInstallMessage();
-						break;
-					case DialogResult.No:
-						mAutoUpdateStates.SkipVer = mUpdateItems[0].Elements[RssManager.NODE_NAME_TITLE];
-						mAutoUpdateStates.Save();
-						throw new Exception("更新版（" + mUpdateItems[0].Elements[RssManager.NODE_NAME_TITLE] + "）はインストールしません。");
-					default:
-						throw new Exception("更新版（" + mUpdateItems[0].Elements[RssManager.NODE_NAME_TITLE] + "）は後でインストールします。");
-				}
-			}
-#endif
+			return isUpdate;
 		}
 
 		// --------------------------------------------------------------------
 		// 最新情報の確認
 		// --------------------------------------------------------------------
-		private async Task<(Boolean result, String errorMessage)> CheckLatestInfoAsync()
+		private async Task<(Boolean isMessageShown, String errorMessage)> CheckLatestInfoAsync()
 		{
-			Boolean result = false;
+			Boolean isMessageShown = false;
 			String errorMessage = String.Empty;
 
 			try
@@ -219,7 +213,7 @@ namespace Updater.Models
 				await PrepareLatestAsync();
 				AskDisplayLatest();
 				DisplayLatest();
-				result = true;
+				isMessageShown = true;
 
 				// 最新情報を正しく表示できたら、それがメッセージ代わりなので、別途のメッセージ表示はしない
 			}
@@ -229,15 +223,15 @@ namespace Updater.Models
 				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
 			}
 
-			return (result, errorMessage);
+			return (isMessageShown, errorMessage);
 		}
 
 		// --------------------------------------------------------------------
 		// 自動更新の確認
 		// --------------------------------------------------------------------
-		private async Task<(Boolean result, String errorMessage)> CheckUpdateAsync()
+		private async Task<(Boolean isMessageShown, String errorMessage)> CheckUpdateAsync()
 		{
-			Boolean result = false;
+			Boolean isMessageShown = false;
 			String errorMessage = String.Empty;
 
 			try
@@ -245,14 +239,17 @@ namespace Updater.Models
 				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "CheckUpdate() relaunch path: " + _params.Relaunch);
 				await PrepareUpdateAsync();
 
+				Boolean isUpdate;
 				if (_params.ForceInstall)
 				{
+					isUpdate = true;
 					ShowInstallMessage();
 				}
 				else
 				{
-					AskUpdate();
+					isUpdate = AskUpdate();
 				}
+				isMessageShown = true;
 #if false
 				mParams.ForceShow = true;
 				IntPtr aOldMainFormHandle = MainFormHandle;
@@ -303,7 +300,7 @@ namespace Updater.Models
 				}
 			}
 #endif
-			return (result, errorMessage);
+			return (isMessageShown, errorMessage);
 		}
 
 		// --------------------------------------------------------------------
@@ -522,8 +519,8 @@ namespace Updater.Models
 		{
 			try
 			{
-				Boolean latestResult = false;
-				Boolean updateResult = false;
+				Boolean isLatestMessageShown = false;
+				Boolean isUpdateMessageShown = false;
 				String latestErrorMessage = String.Empty;
 				String updateErrorMessage = String.Empty;
 
@@ -537,19 +534,18 @@ namespace Updater.Models
 				// 最新情報確認
 				if (_params.IsLatestMode())
 				{
-					(latestResult, latestErrorMessage) = await CheckLatestInfoAsync();
+					(isLatestMessageShown, latestErrorMessage) = await CheckLatestInfoAsync();
 				}
 
 				// 自動更新
 				if (_params.IsUpdateMode())
 				{
-					(updateResult, updateErrorMessage) = await CheckUpdateAsync();
+					(isUpdateMessageShown, updateErrorMessage) = await CheckUpdateAsync();
 				}
 
-				if (!latestResult && !updateResult)
+				if (!isLatestMessageShown && !isUpdateMessageShown)
 				{
-					// 片方でも正常に終了していればそこでメッセージが表示される
-					// どちらも正常に終了していない場合のみメッセージを表示する
+					// どちらもメッセージを表示していない場合のみメッセージを表示する
 					UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Error, latestErrorMessage + "\n\n" + updateErrorMessage);
 				}
 			}
