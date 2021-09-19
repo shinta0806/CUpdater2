@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -72,6 +73,9 @@ namespace Updater.Models
 
 		// ファイル名
 		private const String FILE_NAME_DOWNLOAD_ZIP = "Download.zip";
+
+		// フォルダー名
+		private const String FOLDER_NAME_NEW_EXTRACT = "NewExtract\\";
 
 		// 自動更新用ファイルをダウンロードする回数（プログラムや RSS の不具合で永遠にダウンロードするのを防ぐ）
 		private const Int32 DOWNLOAD_TRY_MAX = 5;
@@ -257,7 +261,7 @@ namespace Updater.Models
 					_mainWindowViewModel.ShowWindow();
 
 					WaitTargetExit();
-					//InstallUpdate();
+					await InstallUpdateAsync();
 				}
 
 #if false
@@ -420,6 +424,124 @@ namespace Updater.Models
 				throw new Exception("正常にダウンロードが完了しませんでした（内容にエラーがあります）。");
 			}
 			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "更新版のダウンロードが完了しました。");
+		}
+
+		// --------------------------------------------------------------------
+		// Download.zip 展開後のルートパス
+		// ＜例外＞ Exception
+		// --------------------------------------------------------------------
+		private String ExtractBasePath()
+		{
+			String[] files = Directory.GetFiles(ExtractPath(), "*");
+			String[] folders = Directory.GetDirectories(ExtractPath(), "*");
+			if (files.Length == 0 && folders.Length == 0)
+			{
+				throw new Exception("ダウンロードした更新版の内容が空です。");
+			}
+
+			// アーカイブの中身（直下）が ID 名で始まるフォルダのみであれば、そのフォルダがルートパス
+			if (files.Length == 0 && folders.Length == 1
+					&& String.Compare(Path.GetFileName(folders[0]), 0, _params.ID, 0, _params.ID.Length, true) == 0)
+			{
+				return folders[0] + "\\";
+			}
+
+			// それ以外なら、ExtractPath() 自体がルートパス
+			return ExtractPath();
+		}
+
+		// --------------------------------------------------------------------
+		// Download.zip を解凍するするフォルダー
+		// --------------------------------------------------------------------
+		private String ExtractPath()
+		{
+			return Common.TempFolderPath() + FOLDER_NAME_NEW_EXTRACT;
+		}
+
+		// --------------------------------------------------------------------
+		// ファイル 1 つをインストールする
+		// ＜例外＞ Exception
+		// --------------------------------------------------------------------
+		private void InstallMove(String targetFile, String extractBasePath)
+		{
+			String middleName = targetFile.Substring(extractBasePath.Length);
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "InstallUpdate() middleName: " + middleName);
+			_mainWindowViewModel.SetSubCaption(middleName);
+			String destFile = Path.GetDirectoryName(UpdaterModel.Instance.EnvModel.ExeFullPath) + "\\" + middleName;
+			Directory.CreateDirectory(Path.GetDirectoryName(destFile) ?? String.Empty);
+			try
+			{
+				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "InstallUpdate() deleting aDestFile: " + destFile);
+				File.Delete(destFile);
+				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "InstallUpdate() moving: " + targetFile);
+				File.Move(targetFile, destFile);
+			}
+			catch (Exception excep)
+			{
+				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
+				throw new Exception("ファイルのインストールができませんでした：\n" + middleName + "\nファイルが実行中または使用中でないか確認して下さい。");
+			}
+		}
+
+		// --------------------------------------------------------------------
+		// Download.zip をインストールする
+		// ＜例外＞ Exception
+		// --------------------------------------------------------------------
+		private async Task InstallUpdateAsync()
+		{
+			_mainWindowViewModel.ShowInstallingMessage();
+
+			// アーカイブ展開
+			Directory.CreateDirectory(ExtractPath());
+			try
+			{
+				ZipFile.ExtractToDirectory(UpdateArchivePath(), ExtractPath());
+			}
+			catch (Exception excep)
+			{
+				throw new Exception("ダウンロードしたアーカイブを解凍できませんでした：" + excep.Message);
+			}
+			await Task.Delay(Common.GENERAL_SLEEP_TIME);
+
+			// 展開後のベースフォルダと全ファイル取得
+			String extractBasePath = ExtractBasePath();
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "InstallUpdate() extract base folder: " + extractBasePath);
+			String[] extractFiles = Directory.GetFiles(extractBasePath, "*", SearchOption.AllDirectories);
+
+			// アーカイブを移動
+			String? self = null;
+			Int32 count = 0;
+			foreach (String file in extractFiles)
+			{
+				if (String.Compare(Path.GetFileName(file), Path.GetFileName(UpdaterModel.Instance.EnvModel.ExeFullPath), true) == 0)
+				{
+					self = file;
+					UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "InstallUpdate() セルフスキップ");
+				}
+				else
+				{
+					InstallMove(file, extractBasePath);
+					count++;
+				}
+				//PostCommand(UpdaterCommand.WorkerThreadNotifyProgress, count * 1000 / extractFiles.Length);
+			}
+
+#if false
+			// 自分自身が上書きされる場合は Old に退避
+			if (!String.IsNullOrEmpty(self))
+			{
+				mLogWriter.ShowLogMessage(TraceEventType.Verbose, "InstallUpdate() 自分自身を退避");
+				try
+				{
+					File.Move(Application.ExecutablePath, OldPath() + Path.GetFileName(Application.ExecutablePath));
+				}
+				catch
+				{
+					throw new Exception("現行ファイルの退避ができませんでした。");
+				}
+				InstallMove(self, extractBasePath);
+			}
+#endif
 		}
 
 		// --------------------------------------------------------------------

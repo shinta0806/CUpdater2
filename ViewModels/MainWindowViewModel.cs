@@ -184,6 +184,23 @@ namespace Updater.ViewModels
 		}
 
 		// --------------------------------------------------------------------
+		// サブキャプションの設定
+		// --------------------------------------------------------------------
+		public void SetSubCaption(String text)
+		{
+			SubCaption = text;
+		}
+
+		// --------------------------------------------------------------------
+		// インストール中
+		// --------------------------------------------------------------------
+		public void ShowInstallingMessage()
+		{
+			SetCaption("インストール中...");
+			SetSubCaption(String.Empty);
+		}
+
+		// --------------------------------------------------------------------
 		// 更新対象アプリ終了待ち
 		// --------------------------------------------------------------------
 		public void ShowWaitingMessage()
@@ -402,14 +419,6 @@ namespace Updater.ViewModels
 		{
 			Caption = text;
 			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, text);
-		}
-
-		// --------------------------------------------------------------------
-		// サブキャプション
-		// --------------------------------------------------------------------
-		private void SetSubCaption(String text)
-		{
-			SubCaption = text;
 		}
 	}
 }
