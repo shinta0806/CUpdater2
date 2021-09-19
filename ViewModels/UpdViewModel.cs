@@ -32,6 +32,7 @@ namespace Updater.ViewModels
 		// --------------------------------------------------------------------
 		public UpdViewModel()
 		{
+			UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(Common.TRACE_EVENT_TYPE_STATUS, GetType().Name + " 生成中...");
 		}
 
 		// ====================================================================
@@ -54,7 +55,7 @@ namespace Updater.ViewModels
 		// 一般のプロパティー
 		// --------------------------------------------------------------------
 
-		// OK ボタン・削除ボタン等、キャンセル以外のボタンが押されて閉じられた
+		// OK、YES、No 等の結果
 		public MessageBoxResult ViewModelResult { get; protected set; }
 
 		// ====================================================================

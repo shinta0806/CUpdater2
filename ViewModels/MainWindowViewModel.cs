@@ -71,6 +71,14 @@ namespace Updater.ViewModels
 			set => RaisePropertyChangedIfSet(ref _subCaption, value);
 		}
 
+		// 進捗度（最大値：1）
+		private Double _progress;
+		public Double Progress
+		{
+			get => _progress;
+			set => RaisePropertyChangedIfSet(ref _progress, value);
+		}
+
 		// ログ
 		public ObservableCollection<String> Logs { get; set; } = new();
 
@@ -181,6 +189,14 @@ namespace Updater.ViewModels
 
 			// ウィンドウを閉じる
 			CloseWindow();
+		}
+
+		// --------------------------------------------------------------------
+		// 進捗度の設定
+		// --------------------------------------------------------------------
+		public void SetProgress(Double progress)
+		{
+			Progress = progress;
 		}
 
 		// --------------------------------------------------------------------
@@ -380,7 +396,7 @@ namespace Updater.ViewModels
 				}
 			}
 
-			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "AnalyzeParams() ID: " + _params.ID);
+			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "対象 ID：" + _params.ID);
 		}
 
 		// --------------------------------------------------------------------

@@ -75,7 +75,10 @@ namespace Updater.Models
 		private const String FILE_NAME_DOWNLOAD_ZIP = "Download.zip";
 
 		// フォルダー名
+		private const String FOLDER_NAME_NEW_ARCHIVE = "NewArchive\\";
 		private const String FOLDER_NAME_NEW_EXTRACT = "NewExtract\\";
+		private const String FOLDER_NAME_OLD = "Old\\";
+		private const String FOLDER_NAME_UPDATE = "Update\\";
 
 		// 自動更新用ファイルをダウンロードする回数（プログラムや RSS の不具合で永遠にダウンロードするのを防ぐ）
 		private const Int32 DOWNLOAD_TRY_MAX = 5;
@@ -409,6 +412,24 @@ namespace Updater.Models
 			_autoUpdateSettings.DownloadMD5 = _updateItems[0].Elements[RssManager.NODE_NAME_LINK + RssItem.RSS_ITEM_NAME_DELIMITER + RssManager.ATTRIBUTE_NAME_MD5];
 			_autoUpdateSettings.Save();
 
+			// ダウンロード保存用フォルダの初期化
+			String? updateArchiveFolder = Path.GetDirectoryName(UpdateArchivePath());
+			if (String.IsNullOrEmpty(updateArchiveFolder))
+			{
+				throw new Exception("更新版を保存するフォルダーを決定できません。");
+			}
+			try
+			{
+				Directory.Delete(updateArchiveFolder, true);
+			}
+			catch
+			{
+			}
+
+			// 念のための（自分自身との）アクセス競合回避
+			await Task.Delay(Common.GENERAL_SLEEP_TIME);
+			Directory.CreateDirectory(updateArchiveFolder);
+
 			// ミラー選択
 			Int32 mirrorIndex = new Random().Next(_updateItems.Count);
 			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "DownloadUpdate() mirror index: " + mirrorIndex.ToString());
@@ -491,6 +512,19 @@ namespace Updater.Models
 		{
 			_mainWindowViewModel.ShowInstallingMessage();
 
+			// 過去のバックアップが残っていれば削除
+			try
+			{
+				Directory.Delete(OldPath(), true);
+			}
+			catch
+			{
+			}
+
+			// ロックに対する安全マージン
+			await Task.Delay(Common.GENERAL_SLEEP_TIME);
+			Directory.CreateDirectory(OldPath());
+
 			// アーカイブ展開
 			Directory.CreateDirectory(ExtractPath());
 			try
@@ -523,7 +557,7 @@ namespace Updater.Models
 					InstallMove(file, extractBasePath);
 					count++;
 				}
-				//PostCommand(UpdaterCommand.WorkerThreadNotifyProgress, count * 1000 / extractFiles.Length);
+				_mainWindowViewModel.SetProgress((Double)count / extractFiles.Length);
 			}
 
 #if false
@@ -560,11 +594,52 @@ namespace Updater.Models
 			// 確認
 			if (String.Compare(_autoUpdateSettings.DownloadMD5, hashStr, true) != 0)
 			{
-				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "IsUpdateArchiveMD5Valid() アーカイブ情報の MD5 が異なる: _autoUpdateSettings.DownloadMD5: "
-						+ _autoUpdateSettings.DownloadMD5 + ", アーカイブ MD5: " + hashStr);
+				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "ダウンロード情報の MD5 と実際の MD5 が異なります。ダウンロード情報："
+						+ _autoUpdateSettings.DownloadMD5 + ", 実際：" + hashStr);
 				return false;
 			}
 			return true;
+		}
+
+		// --------------------------------------------------------------------
+		// 更新版が既にダウンロード完了しているか
+		// --------------------------------------------------------------------
+		private Boolean IsUpdateDownloaded()
+		{
+			// アーカイブがあるか
+			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "IsUpdateDownloaded() path: " + UpdateArchivePath());
+			if (!File.Exists(UpdateArchivePath()))
+			{
+				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "更新版は未ダウンロードです（ファイルが存在しません）。");
+				return false;
+			}
+
+			// アーカイブは有効か
+			if (_autoUpdateSettings.DownloadVer != _updateItems[0].Elements[RssManager.NODE_NAME_TITLE])
+			{
+				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "更新版は未ダウンロードです（ダウンロード情報のバージョンと求めるバージョンが異なります）。");
+				return false;
+			}
+			if (_autoUpdateSettings.DownloadMD5 != _updateItems[0].Elements[RssManager.NODE_NAME_LINK + RssItem.RSS_ITEM_NAME_DELIMITER + RssManager.ATTRIBUTE_NAME_MD5])
+			{
+				UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "更新版は未ダウンロードです（ダウンロード情報の MD5 が異なります）。");
+				return false;
+			}
+			if (!IsUpdateArchiveMD5Valid())
+			{
+				return false;
+			}
+
+			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "更新版をすでにダウンロード済です。");
+			return true;
+		}
+
+		// --------------------------------------------------------------------
+		// 現行ファイルのバックアップ先パス
+		// --------------------------------------------------------------------
+		private String OldPath()
+		{
+			return UpdaterModel.Instance.EnvModel.ExeFullFolder + FOLDER_NAME_UPDATE + FOLDER_NAME_OLD;
 		}
 
 		// --------------------------------------------------------------------
@@ -615,6 +690,15 @@ namespace Updater.Models
 
 				// 空の情報で保存
 				_autoUpdateSettings.Save();
+
+				// ダウンロード済みファイルも削除
+				try
+				{
+					File.Delete(UpdateArchivePath());
+				}
+				catch
+				{
+				}
 			}
 			else
 			{
@@ -641,7 +725,10 @@ namespace Updater.Models
 			UpdCommon.ShowLogMessageAndNotify(_params, Common.TRACE_EVENT_TYPE_STATUS, "新しいバージョン「" + _updateItems[0].Elements[RssManager.NODE_NAME_TITLE] + "」が見つかりました。");
 
 			// ダウンロード
-			await DownloadUpdateArchiveAsync();
+			if (!IsUpdateDownloaded())
+			{
+				await DownloadUpdateArchiveAsync();
+			}
 		}
 
 		// --------------------------------------------------------------------
@@ -707,7 +794,7 @@ namespace Updater.Models
 		// --------------------------------------------------------------------
 		private String UpdateArchivePath()
 		{
-			return Common.TempFolderPath() + FILE_NAME_DOWNLOAD_ZIP;
+			return UpdaterModel.Instance.EnvModel.ExeFullFolder + FOLDER_NAME_UPDATE + FOLDER_NAME_NEW_ARCHIVE + FILE_NAME_DOWNLOAD_ZIP;
 		}
 
 		// --------------------------------------------------------------------
