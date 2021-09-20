@@ -4,6 +4,7 @@
     xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:l="http://schemas.livet-mvvm.net/2011/wpf"
     xmlns:msm="clr-namespace:Updater.Models.SharedMisc"
+    xmlns:sb="clr-namespace:Shinta.Behaviors"
     xmlns:v="clr-namespace:Updater.Views"
     xmlns:vm="clr-namespace:Updater.ViewModels"
     xmlns:vmw="clr-namespace:Updater.Views.MiscWindows"
@@ -42,6 +43,10 @@
         <Label Content="{Binding Caption}" DockPanel.Dock="Top" />
         <Label Content="{Binding SubCaption}" DockPanel.Dock="Top" Margin="0,10,0,0" />
         <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" Height="20" DockPanel.Dock="Top" Margin="0,10,0,0" />
-        <ListBox ItemsSource="{Binding Logs}" ScrollViewer.VerticalScrollBarVisibility="Visible" DockPanel.Dock="Top" Margin="0,10,0,0"/>
+        <ListBox ItemsSource="{Binding Logs}" ScrollViewer.VerticalScrollBarVisibility="Visible" DockPanel.Dock="Top" Margin="0,10,0,0">
+            <behaviors:Interaction.Behaviors>
+                <sb:ListBoxBindingSupportBehavior SelectedIndex="{Binding SelectedLogIndex}" />
+            </behaviors:Interaction.Behaviors>
+        </ListBox>
     </DockPanel>
 </Window>

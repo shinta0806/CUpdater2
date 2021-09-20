@@ -560,14 +560,13 @@ namespace Updater.Models
 				_mainWindowViewModel.SetProgress((Double)count / extractFiles.Length);
 			}
 
-#if false
 			// 自分自身が上書きされる場合は Old に退避
 			if (!String.IsNullOrEmpty(self))
 			{
-				mLogWriter.ShowLogMessage(TraceEventType.Verbose, "InstallUpdate() 自分自身を退避");
+				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "InstallUpdate() 自分自身を退避");
 				try
 				{
-					File.Move(Application.ExecutablePath, OldPath() + Path.GetFileName(Application.ExecutablePath));
+					File.Move(UpdaterModel.Instance.EnvModel.ExeFullPath, OldPath() + Path.GetFileName(UpdaterModel.Instance.EnvModel.ExeFullPath));
 				}
 				catch
 				{
@@ -575,7 +574,6 @@ namespace Updater.Models
 				}
 				InstallMove(self, extractBasePath);
 			}
-#endif
 		}
 
 		// --------------------------------------------------------------------

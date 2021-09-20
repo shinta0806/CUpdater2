@@ -82,6 +82,14 @@ namespace Updater.ViewModels
 		// ログ
 		public ObservableCollection<String> Logs { get; set; } = new();
 
+		// ログ選択行番号
+		private Int32 _selectedLogIndex;
+		public Int32 SelectedLogIndex
+		{
+			get => _selectedLogIndex;
+			set => RaisePropertyChangedIfSet(ref _selectedLogIndex, value);
+		}
+
 		// ====================================================================
 		// public メンバー関数
 		// ====================================================================
@@ -405,6 +413,8 @@ namespace Updater.ViewModels
 		private void AppendDisplayText(String text)
 		{
 			Logs.Add(text);
+			SelectedLogIndex = Logs.Count - 1;
+
 		}
 
 		// --------------------------------------------------------------------
