@@ -47,7 +47,7 @@
                     <Label Content="ホームページ：" HorizontalContentAlignment="Right" Width="110"/>
                     <Label>
                         <Hyperlink Command="{Binding LinkClickedCommand}" CommandParameter="{Binding Text, ElementName=TextBlockAutherWeb}" >
-                            <TextBlock Name="TextBlockAutherWeb" Text="http://shinta.coresv.com"/>
+                            <TextBlock Name="TextBlockAutherWeb" Text="https://shinta.coresv.com/"/>
                         </Hyperlink>
                     </Label>
                 </StackPanel>

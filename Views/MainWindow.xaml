@@ -33,6 +33,10 @@
             <l:WindowInteractionMessageAction InvokeActionOnlyWhenWindowIsActive="False" />
         </l:InteractionMessageTrigger>
 
+        <l:InteractionMessageTrigger MessageKey="{x:Static msm:UpdConstants.MESSAGE_KEY_OPEN_ABOUT_WINDOW}" Messenger="{Binding Messenger}">
+            <l:TransitionInteractionMessageAction WindowType="{x:Type vmw:AboutWindow}" Mode="Modal" IsOwned="True" InvokeActionOnlyWhenWindowIsActive="False" />
+        </l:InteractionMessageTrigger>
+
         <l:InteractionMessageTrigger MessageKey="{x:Static msm:UpdConstants.MESSAGE_KEY_OPEN_ASK_UPDATE_WINDOW}" Messenger="{Binding Messenger}">
             <l:TransitionInteractionMessageAction WindowType="{x:Type vmw:AskUpdateWindow}" Mode="Modal" IsOwned="True" InvokeActionOnlyWhenWindowIsActive="False" />
         </l:InteractionMessageTrigger>

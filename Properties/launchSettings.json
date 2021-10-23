@@ -2,7 +2,7 @@
   "profiles": {
     "Updater": {
       "commandName": "Project",
-      "commandLineArgs": "/ID Test /Name テストアプリ /Wait 1 /LatestRSS http://shinta.coresv.com/soft/Test_JPN.xml /UpdateRSS http://shinta.coresv.com/soft/Test_AutoUpdate.xml /CurrentVer \"Ver 1.00\" /ForceShow"
+      "commandLineArgs": "/ID Test /Name テストアプリ /Wait 1 /LatestRSS http://shinta.coresv.com/soft/Test_JPN.xml /UpdateRSS http://shinta.coresv.com/soft/Test_AutoUpdate.xml /CurrentVer \"Ver 1.00\" /ForceShow /Verbose"
     }
   }
 }

@@ -8,6 +8,7 @@
 // 
 // ----------------------------------------------------------------------------
 
+using Livet.Messaging;
 using MaterialDesignColors;
 using MaterialDesignThemes.Wpf;
 
@@ -23,6 +24,7 @@ using System.Threading;
 using Updater.Models;
 using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
+using Updater.ViewModels.MiscWindowViewModels;
 
 namespace Updater.ViewModels
 {
@@ -141,12 +143,11 @@ namespace Updater.ViewModels
 				else if (_params.Verbose)
 				{
 					UpdCommon.NotifyDisplayedIfNeeded(_params);
-#if false
-					using (FormAbout aAbout = new FormAbout(mLogWriter))
-					{
-						aAbout.ShowDialog();
-					}
-#endif
+
+					// ViewModel 経由でウィンドウを開く
+					using AboutWindowViewModel aboutWindowViewModel = new();
+					Messenger.Raise(new TransitionMessage(aboutWindowViewModel, UpdConstants.MESSAGE_KEY_OPEN_ABOUT_WINDOW));
+
 					throw new OperationCanceledException();
 				}
 
