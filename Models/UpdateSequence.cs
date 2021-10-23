@@ -239,6 +239,7 @@ namespace Updater.Models
 		private async Task<(Boolean isMessageShown, String errorMessage)> CheckUpdateAsync()
 		{
 			Boolean isMessageShown = false;
+			Boolean isUpdate = false;
 			String errorMessage = String.Empty;
 
 			try
@@ -246,7 +247,6 @@ namespace Updater.Models
 				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "CheckUpdate() relaunch path: " + _params.Relaunch);
 				await PrepareUpdateAsync();
 
-				Boolean isUpdate;
 				if (_params.ForceInstall)
 				{
 					isUpdate = true;
@@ -265,58 +265,33 @@ namespace Updater.Models
 
 					WaitTargetExit();
 					await InstallUpdateAsync();
-				}
 
-#if false
-				mParams.ForceShow = true;
-				IntPtr aOldMainFormHandle = MainFormHandle;
-				PostCommand(UpdaterCommand.ShowMainFormRequested);
-
-				// ShowMainFormRequested により MainFormHandle が更新されるはずなので、それを待つ
-				for (Int32 i = 0; i < WAIT_MAIN_FORM_HANDLE_CHANGE_MAX; i++)
-				{
-					if (MainFormHandle != aOldMainFormHandle)
+					String okMessage = "更新版のインストールが完了しました。";
+					if (!String.IsNullOrEmpty(_params.Relaunch))
 					{
-						mLogWriter.ShowLogMessage(TraceEventType.Verbose, "CheckUpdate() #" + i.ToString() + " で脱出");
-						break;
+						okMessage += "\n" + _displayName + "を再起動します。";
 					}
-					Thread.Sleep(Common.GENERAL_SLEEP_TIME);
+					UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Information, okMessage);
 				}
-
-				WaitTargetExit();
-				InstallUpdate();
-
-				String aOKMessage = String.Empty;
-				aOKMessage = "更新版のインストールが完了しました。";
-				if (!String.IsNullOrEmpty(mParams.Relaunch))
-				{
-					aOKMessage += "\n" + mDisplayName + "を再起動します。";
-				}
-				LogAndSendAndShowMessage(TraceEventType.Information, aOKMessage, true);
-				result = true;
-#endif
 			}
 			catch (Exception oExcep)
 			{
 				errorMessage = "【更新版の確認】\n" + oExcep.Message;
 			}
 
-#if false
 			// 再起動
-			if (result && !String.IsNullOrEmpty(mParams.Relaunch))
+			if (isUpdate && String.IsNullOrEmpty(errorMessage) && !String.IsNullOrEmpty(_params.Relaunch))
 			{
 				try
 				{
-					Process.Start(mParams.Relaunch);
+					UpdCommon.ShellExecute(_params.Relaunch);
 				}
 				catch
 				{
-					LogAndSendAndShowMessage(TraceEventType.Error, mDisplayName + "を再起動できませんでした。", true);
-					errorMessage = mDisplayName + "を再起動できませんでした。";
-					result = false;
+					UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Error, _displayName + "を再起動できませんでした。");
+					errorMessage = _displayName + "を再起動できませんでした。";
 				}
 			}
-#endif
 			return (isMessageShown, errorMessage);
 		}
 

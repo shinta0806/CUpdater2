@@ -414,7 +414,6 @@ namespace Updater.ViewModels
 		{
 			Logs.Add(text);
 			SelectedLogIndex = Logs.Count - 1;
-
 		}
 
 		// --------------------------------------------------------------------
