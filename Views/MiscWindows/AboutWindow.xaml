@@ -75,7 +75,7 @@
                     <Label Content="配布ページ：" HorizontalContentAlignment="Right" Width="110"/>
                     <Label>
                         <Hyperlink Command="{Binding LinkClickedCommand}" CommandParameter="{Binding Text, ElementName=AppWeb}">
-                            <TextBlock Name="AppWeb" Text="https://shinta.coresv.com/software_dev/cupdater2_jpn/"/>
+                            <TextBlock Name="AppWeb" Text="https://shinta.coresv.com/software_dev/cupdater2-jpn/"/>
                         </Hyperlink>
                     </Label>
                 </StackPanel>
@@ -83,7 +83,7 @@
                     <Label Content="サポートページ：" HorizontalContentAlignment="Right" Width="110"/>
                     <Label>
                         <Hyperlink Command="{Binding LinkClickedCommand}" CommandParameter="{Binding Text, ElementName=AppWebSupport}" >
-                            <TextBlock Name="AppWebSupport" Text="https://shinta.coresv.com/software_dev/cupdater2_jpn/#Support"/>
+                            <TextBlock Name="AppWebSupport" Text="https://shinta.coresv.com/software_dev/cupdater2-jpn/#Support"/>
                         </Hyperlink>
                     </Label>
                 </StackPanel>

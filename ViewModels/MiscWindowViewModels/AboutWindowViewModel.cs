@@ -8,6 +8,8 @@
 // 
 // ----------------------------------------------------------------------------
 
+using Livet.Commands;
+
 using Shinta;
 
 using System;
@@ -46,6 +48,35 @@ namespace Updater.ViewModels.MiscWindowViewModels
 		// --------------------------------------------------------------------
 		// コマンド
 		// --------------------------------------------------------------------
+
+		#region リンククリックの制御
+		private ListenerCommand<String>? _linkClickedCommand;
+
+		public ListenerCommand<String> LinkClickedCommand
+		{
+			get
+			{
+				if (_linkClickedCommand == null)
+				{
+					_linkClickedCommand = new ListenerCommand<String>(LinkClicked);
+				}
+				return _linkClickedCommand;
+			}
+		}
+
+		public static void LinkClicked(String parameter)
+		{
+			try
+			{
+				Common.ShellExecute(parameter);
+			}
+			catch (Exception excep)
+			{
+				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(TraceEventType.Error, "リンククリック時エラー：\n" + excep.Message);
+				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
+			}
+		}
+		#endregion
 
 		// ====================================================================
 		// public メンバー関数

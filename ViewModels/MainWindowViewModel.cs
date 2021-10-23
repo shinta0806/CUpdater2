@@ -9,6 +9,7 @@
 // ----------------------------------------------------------------------------
 
 using Livet.Messaging;
+
 using MaterialDesignColors;
 using MaterialDesignThemes.Wpf;
 
