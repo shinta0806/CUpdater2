@@ -39,20 +39,6 @@ namespace Updater.Models.SharedMisc
 		}
 
 		// --------------------------------------------------------------------
-		// 関連付けられたファイルを開く
-		// ＜例外＞ Exception
-		// --------------------------------------------------------------------
-		public static void ShellExecute(String path)
-		{
-			ProcessStartInfo psi = new()
-			{
-				FileName = path,
-				UseShellExecute = true,
-			};
-			Process.Start(psi);
-		}
-
-		// --------------------------------------------------------------------
 		// ログ表示を行い、かつ、呼びだし元アプリに表示したことを通知
 		// --------------------------------------------------------------------
 		public static void ShowLogMessageAndNotify(UpdaterLauncher launcherParams, TraceEventType eventType, String message)

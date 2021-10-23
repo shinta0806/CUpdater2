@@ -9,6 +9,7 @@
 // ----------------------------------------------------------------------------
 
 using Livet.Messaging;
+
 using Shinta;
 
 using System;
@@ -284,7 +285,7 @@ namespace Updater.Models
 			{
 				try
 				{
-					UpdCommon.ShellExecute(_params.Relaunch);
+					Common.ShellExecute(_params.Relaunch);
 				}
 				catch
 				{
@@ -335,7 +336,7 @@ namespace Updater.Models
 			{
 				try
 				{
-					UpdCommon.ShellExecute(newItem.Elements[RssManager.NODE_NAME_LINK]);
+					Common.ShellExecute(newItem.Elements[RssManager.NODE_NAME_LINK]);
 				}
 				catch
 				{

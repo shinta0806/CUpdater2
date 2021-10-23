@@ -36,6 +36,6 @@
         <Label Content="{Binding AskMessage}" MinWidth="400" Height="80" />
         <Button Content="はい。今すぐ更新します。(_Y)" Command="{Binding ButtonYesClickedCommand}" IsDefault="True" />
         <Button Content="いいえ。このバージョンはインストールしたくありません。(_N)" Style="{StaticResource MaterialDesignRaisedLightButton}" Margin="0,10,0,0" Command="{Binding ButtonNoClickedCommand}" />
-        <Button Content="保留。後日、再度確認して下さい。(_L)" Style="{StaticResource MaterialDesignRaisedLightButton}" Margin="0,30,0,0" IsCancel="True" />
+        <Button Content="後で。再度確認して下さい。(_L)" Style="{StaticResource MaterialDesignRaisedLightButton}" Margin="0,30,0,0" IsCancel="True" Cursor="Hand" />
     </StackPanel>
 </Window>
