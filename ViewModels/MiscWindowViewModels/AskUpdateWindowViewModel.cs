@@ -8,21 +8,15 @@
 // 
 // ----------------------------------------------------------------------------
 
-using Livet;
 using Livet.Commands;
-using Livet.EventListeners;
-using Livet.Messaging;
-using Livet.Messaging.IO;
 using Livet.Messaging.Windows;
+
 using Shinta;
+
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Windows;
-using Updater.Models;
+
 using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
 
@@ -35,10 +29,26 @@ namespace Updater.ViewModels.MiscWindowViewModels
 		// ====================================================================
 
 		// --------------------------------------------------------------------
-		// コンストラクター
+		// プログラマーが使うべき引数付きコンストラクター
+		// --------------------------------------------------------------------
+		public AskUpdateWindowViewModel(UpdaterLauncher updaterParams, String displayName, String newVer)
+		{
+			_params = updaterParams;
+			_newVer = newVer;
+
+			Title = displayName + "の自動更新";
+			AskMessage = displayName + "の更新版が公開されています。インストールしますか？\n"
+					+ "現在のバージョン：" + _params.CurrentVer + "\n"
+					+ "新しいバージョン：" + _newVer;
+		}
+
+		// --------------------------------------------------------------------
+		// ダミーコンストラクター
 		// --------------------------------------------------------------------
 		public AskUpdateWindowViewModel()
 		{
+			_params = null!;
+			_newVer = String.Empty;
 		}
 
 		// ====================================================================
@@ -48,6 +58,14 @@ namespace Updater.ViewModels.MiscWindowViewModels
 		// --------------------------------------------------------------------
 		// View 通信用のプロパティー
 		// --------------------------------------------------------------------
+
+		// 確認メッセージ
+		private String _askMessage = String.Empty;
+		public String AskMessage
+		{
+			get => _askMessage;
+			set => RaisePropertyChangedIfSet(ref _askMessage, value);
+		}
 
 		// --------------------------------------------------------------------
 		// 一般プロパティー
@@ -106,6 +124,12 @@ namespace Updater.ViewModels.MiscWindowViewModels
 		{
 			try
 			{
+				if (MessageBox.Show(_newVer + " が自動インストールされなくなりますが、よろしいですか？", "確認", MessageBoxButton.YesNo, MessageBoxImage.Warning)
+						!= MessageBoxResult.Yes)
+				{
+					return;
+				}
+
 				ViewModelResult = MessageBoxResult.No;
 				Messenger.Raise(new WindowActionMessage(UpdConstants.MESSAGE_KEY_WINDOW_CLOSE));
 			}
@@ -138,5 +162,15 @@ namespace Updater.ViewModels.MiscWindowViewModels
 				UpdaterModel.Instance.EnvModel.LogWriter.ShowLogMessage(Common.TRACE_EVENT_TYPE_STATUS, "　スタックトレース：\n" + excep.StackTrace);
 			}
 		}
+
+		// ====================================================================
+		// private メンバー変数
+		// ====================================================================
+
+		// 本来 UpdaterLauncher は起動用だが、ここでは引数管理用として使用
+		private UpdaterLauncher _params;
+
+		// 見つかった更新版のバージョン
+		private String _newVer;
 	}
 }

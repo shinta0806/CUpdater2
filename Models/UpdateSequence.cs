@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -186,7 +187,7 @@ namespace Updater.Models
 			UpdCommon.NotifyDisplayedIfNeeded(_params);
 
 			// ViewModel 経由でウィンドウを開く
-			using AskUpdateWindowViewModel askUpdateWindowViewModel = new();
+			using AskUpdateWindowViewModel askUpdateWindowViewModel = new(_params, _displayName, _updateItems[0].Elements[RssManager.NODE_NAME_TITLE]);
 			_mainWindowViewModel.Messenger.Raise(new TransitionMessage(askUpdateWindowViewModel, UpdConstants.MESSAGE_KEY_OPEN_ASK_UPDATE_WINDOW));
 
 			switch (askUpdateWindowViewModel.ViewModelResult)
@@ -275,9 +276,9 @@ namespace Updater.Models
 					UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Information, okMessage);
 				}
 			}
-			catch (Exception oExcep)
+			catch (Exception excep)
 			{
-				errorMessage = "【更新版の確認】\n" + oExcep.Message;
+				errorMessage = "【更新版の確認】\n" + excep.Message;
 			}
 
 			// 再起動
@@ -293,6 +294,13 @@ namespace Updater.Models
 					errorMessage = _displayName + "を再起動できませんでした。";
 				}
 			}
+
+			// メッセージ表示済の場合、親はエラーメッセージを表示しないため、ここでエラーメッセージを表示する
+			if (isMessageShown && !String.IsNullOrEmpty(errorMessage))
+			{
+				UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Error, errorMessage);
+			}
+
 			return (isMessageShown, errorMessage);
 		}
 
@@ -505,7 +513,8 @@ namespace Updater.Models
 			Directory.CreateDirectory(ExtractPath());
 			try
 			{
-				ZipFile.ExtractToDirectory(UpdateArchivePath(), ExtractPath());
+				Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+				ZipFile.ExtractToDirectory(UpdateArchivePath(), ExtractPath(), Encoding.GetEncoding(Common.CODE_PAGE_SHIFT_JIS));
 			}
 			catch (Exception excep)
 			{
