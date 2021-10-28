@@ -292,7 +292,7 @@ namespace Updater.ViewModels
 		// ====================================================================
 
 		// 本来 UpdaterLauncher は起動用だが、ここでは引数管理用として使用
-		private UpdaterLauncher _params = new UpdaterLauncher();
+		private readonly UpdaterLauncher _params = new();
 
 		// 多重起動防止用
 		// アプリケーション終了までガベージコレクションされないようにメンバー変数で持つ
@@ -421,7 +421,7 @@ namespace Updater.ViewModels
 		// --------------------------------------------------------------------
 		// マテリアルデザインの外観を設定
 		// --------------------------------------------------------------------
-		private void SetAppearance()
+		private static void SetAppearance()
 		{
 			IEnumerable<Swatch> swatches = new SwatchesProvider().Swatches;
 			PaletteHelper paletteHelper = new();

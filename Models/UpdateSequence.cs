@@ -90,13 +90,13 @@ namespace Updater.Models
 		// ====================================================================
 
 		// メインウィンドウのビューモデル
-		private MainWindowViewModel _mainWindowViewModel;
+		private readonly MainWindowViewModel _mainWindowViewModel;
 
 		// 本来 UpdaterLauncher は起動用だが、ここでは引数管理用として使用
-		private UpdaterLauncher _params;
+		private readonly UpdaterLauncher _params;
 
 		// 表示名
-		private String _displayName;
+		private readonly String _displayName;
 
 		// 最新情報
 		private List<RssItem> _newItems = new();
@@ -114,7 +114,7 @@ namespace Updater.Models
 		// --------------------------------------------------------------------
 		// ユーザーエージェントの追加部分
 		// --------------------------------------------------------------------
-		private String AdditionalUserAgent()
+		private static String AdditionalUserAgent()
 		{
 			return " " + UpdConstants.APP_ID + "/" + Regex.Replace(UpdConstants.APP_VER, @"[^0-9\.]", "");
 		}
@@ -458,7 +458,7 @@ namespace Updater.Models
 		// --------------------------------------------------------------------
 		// Download.zip を解凍するするフォルダー
 		// --------------------------------------------------------------------
-		private String ExtractPath()
+		private static String ExtractPath()
 		{
 			return Common.TempFolderPath() + FOLDER_NAME_NEW_EXTRACT;
 		}
@@ -469,7 +469,7 @@ namespace Updater.Models
 		// --------------------------------------------------------------------
 		private void InstallMove(String targetFile, String extractBasePath)
 		{
-			String middleName = targetFile.Substring(extractBasePath.Length);
+			String middleName = targetFile[extractBasePath.Length..];
 			UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "InstallUpdate() middleName: " + middleName);
 			_mainWindowViewModel.SetSubCaption(middleName);
 			String destFile = Path.GetDirectoryName(UpdaterModel.Instance.EnvModel.ExeFullPath) + "\\" + middleName;
@@ -513,6 +513,10 @@ namespace Updater.Models
 			Directory.CreateDirectory(ExtractPath());
 			try
 			{
+				// ToDo: 現時点では zip 内パスの文字コードは Shift-JIS 固定
+				// 文字コード判定ライブラリに与えるべきオリジナルの（無変換のままの）ファイル名を取得できなかったため
+				// ZipFile.Open() で ZipArchive を取得し ZipArchiveEntry からファイル名を得てもその時点で既に文字コード変換されてしまっている
+				// UTF-8 → Unicode でファイル名を得て UTF-8 に戻してから文字コード判定してみたがうまくいかなかった
 				Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 				ZipFile.ExtractToDirectory(UpdateArchivePath(), ExtractPath(), Encoding.GetEncoding(Common.CODE_PAGE_SHIFT_JIS));
 			}
@@ -567,7 +571,7 @@ namespace Updater.Models
 		private Boolean IsUpdateArchiveMD5Valid()
 		{
 			// MD5 ハッシュ値の取得
-			using FileStream fileStream = new FileStream(UpdateArchivePath(), FileMode.Open, FileAccess.Read, FileShare.Read);
+			using FileStream fileStream = new(UpdateArchivePath(), FileMode.Open, FileAccess.Read, FileShare.Read);
 			using MD5CryptoServiceProvider md5Provider = new();
 			Byte[] hashBytes = md5Provider.ComputeHash(fileStream);
 
@@ -620,7 +624,7 @@ namespace Updater.Models
 		// --------------------------------------------------------------------
 		// 現行ファイルのバックアップ先パス
 		// --------------------------------------------------------------------
-		private String OldPath()
+		private static String OldPath()
 		{
 			return UpdaterModel.Instance.EnvModel.ExeFullFolder + FOLDER_NAME_UPDATE + FOLDER_NAME_OLD;
 		}
@@ -775,7 +779,7 @@ namespace Updater.Models
 		// --------------------------------------------------------------------
 		// ダウンロードした自動更新用アーカイブを保存するパス
 		// --------------------------------------------------------------------
-		private String UpdateArchivePath()
+		private static String UpdateArchivePath()
 		{
 			return UpdaterModel.Instance.EnvModel.ExeFullFolder + FOLDER_NAME_UPDATE + FOLDER_NAME_NEW_ARCHIVE + FILE_NAME_DOWNLOAD_ZIP;
 		}

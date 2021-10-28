@@ -168,9 +168,9 @@ namespace Updater.ViewModels.MiscWindowViewModels
 		// ====================================================================
 
 		// 本来 UpdaterLauncher は起動用だが、ここでは引数管理用として使用
-		private UpdaterLauncher _params;
+		private readonly UpdaterLauncher _params;
 
 		// 見つかった更新版のバージョン
-		private String _newVer;
+		private readonly String _newVer;
 	}
 }
