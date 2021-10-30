@@ -143,6 +143,7 @@ namespace Updater.ViewModels
 				}
 				else if (_params.Verbose)
 				{
+					UpdaterModel.Instance.EnvModel.LogWriter.LogMessage(TraceEventType.Verbose, "Initialize() NotifyHWnd: " + _params.NotifyHWnd);
 					UpdCommon.NotifyDisplayedIfNeeded(_params);
 
 					// ViewModel 経由でウィンドウを開く
