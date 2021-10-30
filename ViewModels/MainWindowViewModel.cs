@@ -51,7 +51,7 @@ namespace Updater.ViewModels
 		// --------------------------------------------------------------------
 
 		// 不透明度
-		private Double _opacity = 0.75;
+		private Double _opacity = 0.0;
 		public Double Opacity
 		{
 			get => _opacity;
@@ -152,7 +152,6 @@ namespace Updater.ViewModels
 					throw new OperationCanceledException();
 				}
 
-#if false
 				// セルフ再起動
 				// .NET Core アプリから起動された場合、自身が呼びだし元のファイルをロックしている状態になっていることがある
 				// セルフ再起動することにより、呼び出し元と自身のアプリの関連性が切れ、ロックが解除されるようだ
@@ -167,7 +166,6 @@ namespace Updater.ViewModels
 					showErrMsg = false;
 					throw new OperationCanceledException("セルフ再起動したため終了します。");
 				}
-#endif
 
 				// 同じパスでの多重起動防止
 				// セルフ再起動しないことが確定してから確認する必要があるため App.xaml.cs では実施せずにここで実施する
