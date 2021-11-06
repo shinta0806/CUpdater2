@@ -5,6 +5,8 @@
     <TargetFramework>net5.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>embedded</DebugType>
     <Authors>SHINTA</Authors>
     <Copyright>Copyright © by SHINTA</Copyright>
     <ApplicationIcon>Icon\Icon_1.ico</ApplicationIcon>
