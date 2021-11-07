@@ -268,6 +268,7 @@ namespace Updater.Models
 					WaitTargetExit();
 					await InstallUpdateAsync();
 
+					_mainWindowViewModel.ShowInstalledMessage();
 					String okMessage = "更新版のインストールが完了しました。";
 					if (!String.IsNullOrEmpty(_params.Relaunch))
 					{

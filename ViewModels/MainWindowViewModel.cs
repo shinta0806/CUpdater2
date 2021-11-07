@@ -22,6 +22,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Windows;
+
 using Updater.Models;
 using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
@@ -239,6 +240,15 @@ namespace Updater.ViewModels
 		}
 
 		// --------------------------------------------------------------------
+		// インストール完了
+		// --------------------------------------------------------------------
+		public void ShowInstalledMessage()
+		{
+			SetCaption("更新版のインストールが完了しました。");
+			SetSubCaption(String.Empty);
+		}
+
+		// --------------------------------------------------------------------
 		// インストール中
 		// --------------------------------------------------------------------
 		public void ShowInstallingMessage()
@@ -252,9 +262,8 @@ namespace Updater.ViewModels
 		// --------------------------------------------------------------------
 		public void ShowWaitingMessage()
 		{
-			SetCaption("アプリケーションの終了を待っています...");
-			SetSubCaption("アプリケーションを終了させて下さい。終了後、自動的に更新が開始されます。");
-			//TextBoxLog.AppendText("［" + mLogWriter.TraceEventTypeToCaption(TraceEventType.Information) + "］アプリケーションの終了を待っています...\r\n");
+			SetCaption(UpdCommon.DisplayName(_params) + "の終了を待っています...");
+			SetSubCaption(UpdCommon.DisplayName(_params) + "を終了させて下さい。終了後、自動的に更新が開始されます。");
 		}
 
 		// --------------------------------------------------------------------
