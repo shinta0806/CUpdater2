@@ -117,7 +117,7 @@ namespace Updater.ViewModels
 				AnalyzeParams();
 
 				// タイトルバー
-				Title = UpdConstants.APP_NAME_J;
+				Title = UpdCommon.DisplayName(_params) + "の自動更新 - " + UpdConstants.APP_NAME_J;
 #if DEBUG
 				Title = "［デバッグ］" + Title;
 #endif

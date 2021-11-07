@@ -9,7 +9,7 @@
     xmlns:vm="clr-namespace:Updater.ViewModels"
     xmlns:vmw="clr-namespace:Updater.Views.MiscWindows"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="{Binding Title}" Left="{Binding Left}" Width="{x:Static msm:UpdConstants.MAIN_WINDOW_WIDTH}" Height="300" >
+    Title="{Binding Title}" Left="{Binding Left, Mode=TwoWay}" Width="{x:Static msm:UpdConstants.MAIN_WINDOW_WIDTH}" Height="300" >
 
     <Window.DataContext>
         <vm:MainWindowViewModel />

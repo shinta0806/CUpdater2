@@ -46,7 +46,7 @@ namespace Updater.Models
 			_params = launchParams;
 
 			// 表示名の設定
-			_displayName = "「" + (String.IsNullOrEmpty(_params.Name) ? _params.ID : _params.Name) + "」";
+			_displayName = UpdCommon.DisplayName(_params);
 		}
 
 		// ====================================================================
@@ -539,6 +539,7 @@ namespace Updater.Models
 				if (String.Compare(Path.GetFileName(file), Path.GetFileName(UpdaterModel.Instance.EnvModel.ExeFullPath), true) == 0)
 				{
 					self = file;
+					count++;
 					UpdCommon.ShowLogMessageAndNotify(_params, TraceEventType.Verbose, "InstallUpdate() セルフスキップ");
 				}
 				else

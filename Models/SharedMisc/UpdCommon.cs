@@ -24,6 +24,14 @@ namespace Updater.Models.SharedMisc
 		// ====================================================================
 
 		// --------------------------------------------------------------------
+		// 表示用のアプリケーション名
+		// --------------------------------------------------------------------
+		public static String DisplayName(UpdaterLauncher launchParams)
+		{
+			return "「" + (String.IsNullOrEmpty(launchParams.Name) ? launchParams.ID : launchParams.Name) + "」";
+		}
+
+		// --------------------------------------------------------------------
 		// 通知対象ウィンドウに、UI を表示したことを通知（1 度だけ）
 		// --------------------------------------------------------------------
 		public static void NotifyDisplayedIfNeeded(UpdaterLauncher launchParams)
