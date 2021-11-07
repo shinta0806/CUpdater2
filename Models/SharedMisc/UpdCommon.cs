@@ -28,7 +28,14 @@ namespace Updater.Models.SharedMisc
 		// --------------------------------------------------------------------
 		public static String DisplayName(UpdaterLauncher launchParams)
 		{
-			return "「" + (String.IsNullOrEmpty(launchParams.Name) ? launchParams.ID : launchParams.Name) + "」";
+			String name = String.IsNullOrEmpty(launchParams.Name) ? launchParams.ID : launchParams.Name;
+			if (String.IsNullOrEmpty(name))
+			{
+				// バージョン情報表示の場合は空
+				return String.Empty;
+			}
+
+			return "「" + name + "」";
 		}
 
 		// --------------------------------------------------------------------
