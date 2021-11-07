@@ -21,7 +21,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-
+using System.Windows;
 using Updater.Models;
 using Updater.Models.SharedMisc;
 using Updater.Models.UpdaterModels;
@@ -82,10 +82,32 @@ namespace Updater.ViewModels
 			set => RaisePropertyChangedIfSet(ref _progress, value);
 		}
 
-		// ログ
+		// 詳細ログを表示する
+		private Boolean _showLog;
+		public Boolean ShowLog
+		{
+			get => _showLog;
+			set
+			{
+				if (RaisePropertyChangedIfSet(ref _showLog, value))
+				{
+					LogVisibility = _showLog ? Visibility.Visible : Visibility.Collapsed;
+				}
+			}
+		}
+
+		// 詳細ログ
 		public ObservableCollection<String> Logs { get; set; } = new();
 
-		// ログ選択行番号
+		// 詳細ログの表示状態
+		private Visibility _logVisibility = Visibility.Collapsed;
+		public Visibility LogVisibility
+		{
+			get => _logVisibility;
+			set => RaisePropertyChangedIfSet(ref _logVisibility, value);
+		}
+
+		// 詳細ログ選択行番号
 		private Int32 _selectedLogIndex;
 		public Int32 SelectedLogIndex
 		{

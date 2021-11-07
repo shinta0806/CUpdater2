@@ -9,7 +9,7 @@
     xmlns:vm="clr-namespace:Updater.ViewModels"
     xmlns:vmw="clr-namespace:Updater.Views.MiscWindows"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="{Binding Title}" Left="{Binding Left, Mode=TwoWay}" Width="{x:Static msm:UpdConstants.MAIN_WINDOW_WIDTH}" Height="300" >
+    Title="{Binding Title}" Left="{Binding Left, Mode=TwoWay}" Width="{x:Static msm:UpdConstants.MAIN_WINDOW_WIDTH}" ResizeMode="CanMinimize" SizeToContent="Height" >
 
     <Window.DataContext>
         <vm:MainWindowViewModel />
@@ -46,7 +46,11 @@
         <Label Content="{Binding Caption}" DockPanel.Dock="Top" />
         <Label Content="{Binding SubCaption}" DockPanel.Dock="Top" Margin="0,10,0,0" />
         <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" Height="20" DockPanel.Dock="Top" Margin="0,10,0,0" />
-        <ListBox ItemsSource="{Binding Logs}" ScrollViewer.VerticalScrollBarVisibility="Visible" DockPanel.Dock="Top" Margin="0,10,0,0">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0" >
+            <Label Content="詳細" />
+            <ToggleButton IsChecked="{Binding ShowLog}" />
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Logs}" ScrollViewer.VerticalScrollBarVisibility="Visible" DockPanel.Dock="Top" Height="300" Margin="0,10,0,0" Visibility="{Binding LogVisibility}" >
             <behaviors:Interaction.Behaviors>
                 <sb:ListBoxBindingSupportBehavior SelectedIndex="{Binding SelectedLogIndex}" />
             </behaviors:Interaction.Behaviors>
