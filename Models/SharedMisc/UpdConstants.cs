@@ -45,5 +45,15 @@ namespace Updater.Models.SharedMisc
 
 		// Fantia
 		public const String URL_FANTIA = "https://fantia.jp/fanclubs/65509";
+
+		// --------------------------------------------------------------------
+		// その他
+		// --------------------------------------------------------------------
+
+		// メインウィンドウの横幅
+		public const Double MAIN_WINDOW_WIDTH = 635.0;
+
+		// メインウィンドウの左端
+		public const Double MAIN_WINDOW_LEFT = 20.0;
 	}
 }

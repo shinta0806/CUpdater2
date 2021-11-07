@@ -50,12 +50,12 @@ namespace Updater.ViewModels
 		// View 通信用のプロパティー
 		// --------------------------------------------------------------------
 
-		// 不透明度
-		private Double _opacity = 0.0;
-		public Double Opacity
+		// 左端
+		private Double _left = -(UpdConstants.MAIN_WINDOW_LEFT + UpdConstants.MAIN_WINDOW_WIDTH);
+		public Double Left
 		{
-			get => _opacity;
-			set => RaisePropertyChangedIfSet(ref _opacity, value);
+			get => _left;
+			set => RaisePropertyChangedIfSet(ref _left, value);
 		}
 
 		// メインキャプション
@@ -107,12 +107,6 @@ namespace Updater.ViewModels
 			Boolean showErrMsg = _params.ForceShow;
 			try
 			{
-				// タイトルバー（ユーザーには見えないが識別に使われるかもしれないので一応設定しておく）
-				Title = UpdConstants.APP_NAME_J;
-#if DEBUG
-				Title = "［デバッグ］" + Title;
-#endif
-
 				// 外観
 				SetAppearance();
 
@@ -121,6 +115,12 @@ namespace Updater.ViewModels
 
 				// コマンドライン引数
 				AnalyzeParams();
+
+				// タイトルバー
+				Title = UpdConstants.APP_NAME_J;
+#if DEBUG
+				Title = "［デバッグ］" + Title;
+#endif
 
 				// 呼びだし元アプリが背面に行くのを防止できるように配慮
 				if (_params.NotifyHWnd != IntPtr.Zero)
@@ -240,7 +240,7 @@ namespace Updater.ViewModels
 		// --------------------------------------------------------------------
 		public void ShowWindow()
 		{
-			Opacity = 1.0;
+			Left = UpdConstants.MAIN_WINDOW_LEFT;
 		}
 
 		// ====================================================================
