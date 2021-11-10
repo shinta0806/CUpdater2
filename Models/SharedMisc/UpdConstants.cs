@@ -23,7 +23,7 @@ namespace Updater.Models.SharedMisc
 		// --------------------------------------------------------------------
 		public const String APP_ID = "Updater2";
 		public const String APP_NAME_J = "ちょちょいと自動更新 2";
-		public const String APP_VER = "Ver 1.00";
+		public const String APP_VER = "Ver 1.01";
 		public const String COPYRIGHT_J = "Copyright (C) 2021 by SHINTA";
 
 		// --------------------------------------------------------------------
