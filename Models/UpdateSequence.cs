@@ -574,8 +574,8 @@ namespace Updater.Models
 		{
 			// MD5 ハッシュ値の取得
 			using FileStream fileStream = new(UpdateArchivePath(), FileMode.Open, FileAccess.Read, FileShare.Read);
-			using MD5CryptoServiceProvider md5Provider = new();
-			Byte[] hashBytes = md5Provider.ComputeHash(fileStream);
+			using MD5 md5 = MD5.Create();
+			Byte[] hashBytes = md5.ComputeHash(fileStream);
 
 			// ハッシュ値を文字列に変換
 			String hashStr = BitConverter.ToString(hashBytes).Replace("-", String.Empty);
